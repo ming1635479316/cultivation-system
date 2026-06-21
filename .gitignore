@@ -1,0 +1,5 @@
+# 计算机修行录
+__pycache__/
+*.pyc
+cultivation.db
+.env

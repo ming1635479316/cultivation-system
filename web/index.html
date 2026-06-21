@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>计算机修行录</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="logo"><span class="logo-dot"></span>修炼录</div>
+    <div class="nav-links">
+      <a href="index.html" class="active">主页</a>
+      <a href="profile.html">我的</a>
+      <a href="messages.html">消息</a>
+      <a href="#" onclick="logout();return false" style="color:var(--text-muted);font-size:12px;margin-left:8px;">退出</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <h1>计算机修行录</h1>
+  </section>
+
+  <div class="container">
+    <div class="current-progress" id="currentProgress"></div>
+
+    <h2 class="page-title">修炼九段</h2>
+    <p class="page-sub">悬停查看能力要求 · 点击查看进阶条件</p>
+    <div id="levelList"></div>
+  </div>
+
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" style="position:relative">
+      <button class="modal-close" id="modalClose">&times;</button>
+
+      <div id="modalInfo">
+        <div class="modal-header">
+          <div class="modal-badge" id="modalBadge"></div>
+          <div>
+            <div class="modal-title" id="modalTitle"></div>
+            <div class="modal-tagline" id="modalPoem"></div>
+          </div>
+        </div>
+        <div class="modal-section"><h4>修炼关卡</h4><ul class="modal-tasks" id="modalTasks"></ul></div>
+        <div class="modal-section"><h4>考核</h4><p id="modalExam"></p></div>
+        <div class="modal-section"><h4>修炼资源</h4><div id="modalResources"></div></div>
+        <div class="modal-section"><h4>进阶条件</h4><p id="modalRequire"></p></div>
+        <div class="modal-section"><h4>达到此境界</h4><p id="modalDesc"></p></div>
+        <button class="btn-quiz" id="btnStartQuiz">开始考核</button>
+      </div>
+
+      <div id="modalQuiz" style="display:none">
+        <div class="modal-header">
+          <div class="modal-badge" id="quizBadge"></div>
+          <div>
+            <div class="modal-title" id="quizTitle"></div>
+            <div class="modal-tagline">考核</div>
+          </div>
+        </div>
+        <div id="quizQuestions"></div>
+        <div style="display:flex;gap:8px;margin-top:16px;">
+          <button class="btn-quiz" id="btnSubmitQuiz">提交</button>
+          <button class="btn-back" id="btnBackQuiz">← 返回</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 突破成功动效 -->
+  <div class="breakthrough-overlay" id="breakthroughOverlay">
+    <div class="breakthrough-content">
+      <div class="breakthrough-glow"></div>
+      <div class="breakthrough-title">突破成功</div>
+      <div class="breakthrough-level" id="breakthroughLevel"></div>
+      <div class="breakthrough-poem" id="breakthroughPoem"></div>
+    </div>
+  </div>
+
+  <!-- 关卡验证弹窗 -->
+  <div class="task-confirm-overlay" id="taskCheckOverlay" onclick="closeTaskCheck()">
+    <div class="task-confirm-card" onclick="event.stopPropagation()">
+      <div class="task-confirm-title">关卡验证</div>
+      <div class="task-confirm-text" id="taskCheckTask"></div>
+      <div class="task-check-q" id="taskCheckQuestion"></div>
+      <div class="task-check-opts" id="taskCheckOpts"></div>
+      <div class="task-check-feedback" id="taskCheckFeedback" style="display:none"></div>
+      <div class="task-confirm-actions">
+        <button class="btn-save" id="btnSubmitCheck" onclick="submitTaskCheck()">提交</button>
+        <button class="btn-cancel" onclick="closeTaskCheck()">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">计算机修行录 · 记录每一次突破</div>
+
+  <script src="js/data.js"></script>
+  <script>
+    // 当前进度
+    const lv = USER.level;
+    const currentLevel = LEVELS[lv];
+    document.getElementById('currentProgress').innerHTML = `
+      <div class="cp-title">当前境界</div>
+      <div class="cp-level">${currentLevel.name}</div>
+      <div class="cp-desc">${currentLevel.poem}</div>
+      <div class="cp-bar"><div class="cp-fill" style="width:${USER.progress}%"></div></div>`;
+
+    // 段位列表
+    const listEl = document.getElementById('levelList');
+    LEVELS.forEach((level, idx) => {
+      const isCurrent = idx === USER.level;
+      const isPast = idx < USER.level;
+      const tag = isCurrent ? '<span class="level-tag arrived">当前</span>'
+        : isPast ? '<span class="level-tag arrived">✓ 已突破</span>'
+        : '<span class="level-tag locked">未至</span>';
+      listEl.innerHTML += `
+        <div class="level-card ${isCurrent ? 'current' : ''}" onclick="openModal(${idx})">
+          <div class="level-header">
+            <div class="level-badge level-${level.id}">${level.id}</div>
+            <div>
+              <div class="level-name">${level.name}</div>
+              <div class="level-desc">${level.poem}</div>
+            </div>
+            ${tag}
+          </div>
+          <div class="level-detail">
+            <p><strong>能做什么：</strong>${level.produce}</p>
+            <p><strong>核心能力：</strong>${level.skills.join(' · ')}</p>
+          </div>
+        </div>`;
+    });
+
+    // ===== 辅助函数 =====
+    function refreshProgress() {
+      var lv = USER.level;
+      var cl = LEVELS[lv];
+      var el = document.getElementById('currentProgress');
+      if (!el) return;
+      el.innerHTML = '<div class="cp-title">当前境界</div>' +
+        '<div class="cp-level">' + cl.name + '</div>' +
+        '<div class="cp-desc">' + cl.poem + '</div>' +
+        '<div class="cp-bar"><div class="cp-fill" style="width:' + USER.progress + '%"></div></div>';
+    }
+
+    function refreshModalTasks(levelId) {
+      var level = LEVELS[levelId];
+      var el = document.getElementById('modalTasks');
+      if (!el) return;
+      el.innerHTML = level.tasks.length
+        ? level.tasks.map(function(t, ti) {
+            var done = isTaskDone(levelId, ti);
+            return '<li class="task-item' + (done ? ' task-done' : '') + '" onclick="handleTaskClick(' + levelId + ',' + ti + ')" title="点击切换完成状态">' + (done ? '✅' : '☐') + ' ' + t + '</li>';
+          }).join('')
+        : '<li style="color:var(--text-muted)">此境界的修炼关卡待补充</li>';
+    }
+
+    function handleTaskClick(levelId, taskIdx) {
+      // 已完成的直接取消
+      if (isTaskDone(levelId, taskIdx)) {
+        toggleTask(levelId, taskIdx);
+        refreshModalTasks(levelId);
+        refreshProgress();
+        return;
+      }
+      // 未完成 → 查验证题
+      var taskText = LEVELS[levelId].tasks[taskIdx];
+      var checkKey = levelId + '-' + taskIdx;
+      var check = TASK_CHECKS[checkKey];
+
+      document.getElementById('taskCheckTask').textContent = taskText;
+      document.getElementById('taskCheckFeedback').style.display = 'none';
+      document.getElementById('btnSubmitCheck').style.display = '';
+
+      if (check) {
+        // 有客观题 → 显示题目
+        document.getElementById('taskCheckQuestion').textContent = check.q;
+        document.getElementById('taskCheckQuestion').style.display = '';
+        var optsHtml = check.opts.map(function(o, i) {
+          return '<label class="task-check-opt"><input type="radio" name="taskCheck" value="' + i + '"><span>' + 'ABCD'[i] + '. ' + o + '</span></label>';
+        }).join('');
+        document.getElementById('taskCheckOpts').innerHTML = optsHtml;
+        document.getElementById('taskCheckOpts').style.display = '';
+      } else {
+        // 无客观题（高段位）→ 简单确认
+        document.getElementById('taskCheckQuestion').style.display = 'none';
+        document.getElementById('taskCheckOpts').style.display = 'none';
+        document.getElementById('btnSubmitCheck').textContent = '我确实完成了';
+      }
+
+      window._pendingTask = { levelId: levelId, taskIdx: taskIdx, hasCheck: !!check };
+      document.getElementById('taskCheckOverlay').classList.add('open');
+    }
+
+    function submitTaskCheck() {
+      var t = window._pendingTask;
+      if (!t) return;
+      var checkKey = t.levelId + '-' + t.taskIdx;
+      var check = TASK_CHECKS[checkKey];
+
+      if (check) {
+        var sel = document.querySelector('input[name="taskCheck"]:checked');
+        if (!sel) return;
+        var answer = parseInt(sel.value);
+        if (answer === check.ans) {
+          // 答对
+          toggleTask(t.levelId, t.taskIdx);
+          refreshModalTasks(t.levelId);
+          refreshProgress();
+          closeTaskCheck();
+        } else {
+          // 答错
+          var fb = document.getElementById('taskCheckFeedback');
+          fb.textContent = '✕ 答错了，回顾一下这个知识点再试';
+          fb.style.display = 'block';
+          fb.style.color = 'var(--seal)';
+        }
+      } else {
+        // 无客观题，直接确认
+        toggleTask(t.levelId, t.taskIdx);
+        refreshModalTasks(t.levelId);
+        refreshProgress();
+        closeTaskCheck();
+      }
+    }
+
+    function closeTaskCheck() { 
+      document.getElementById('taskCheckOverlay').classList.remove('open');
+      document.getElementById('btnSubmitCheck').textContent = '提交';
+      window._pendingTask = null;
+    }
+
+    function showBreakthroughEffect(level) {
+      var overlay = document.getElementById('breakthroughOverlay');
+      document.getElementById('breakthroughLevel').textContent = level.name;
+      document.getElementById('breakthroughPoem').textContent = '— ' + level.poem;
+      overlay.classList.add('show');
+      setTimeout(function() {
+        overlay.classList.remove('show');
+      }, 2600);
+    }
+
+    function refreshLevelList() {
+      var listEl = document.getElementById('levelList');
+      if (!listEl) return;
+      listEl.innerHTML = '';
+      LEVELS.forEach(function(level, idx) {
+        var isCurrent = idx === USER.level;
+        var isPast = idx < USER.level;
+        var tag = isCurrent ? '<span class="level-tag arrived">当前</span>'
+          : isPast ? '<span class="level-tag arrived">✓ 已突破</span>'
+          : '<span class="level-tag locked">未至</span>';
+        listEl.innerHTML += '<div class="level-card' + (isCurrent ? ' current' : '') + '" onclick="openModal(' + idx + ')">' +
+          '<div class="level-header">' +
+          '<div class="level-badge level-' + level.id + '">' + level.id + '</div>' +
+          '<div>' +
+          '<div class="level-name">' + level.name + '</div>' +
+          '<div class="level-desc">' + level.poem + '</div>' +
+          '</div>' +
+          tag +
+          '</div>' +
+          '<div class="level-detail">' +
+          '<p><strong>能做什么：</strong>' + level.produce + '</p>' +
+          '<p><strong>核心能力：</strong>' + level.skills.join(' · ') + '</p>' +
+          '</div>' +
+          '</div>';
+      });
+    }
+
+    // 弹窗
+    const overlay = document.getElementById('modalOverlay');
+    const modalBadge = document.getElementById('modalBadge');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalPoem = document.getElementById('modalPoem');
+    const modalTasks = document.getElementById('modalTasks');
+    const modalExam = document.getElementById('modalExam');
+    const modalResources = document.getElementById('modalResources');
+    const modalRequire = document.getElementById('modalRequire');
+    const modalDesc = document.getElementById('modalDesc');
+
+    function openModal(idx) {
+      const level = LEVELS[idx];
+      modalBadge.textContent = level.id;
+      modalBadge.style.background = level.color;
+      modalTitle.textContent = level.name;
+      modalPoem.textContent = level.poem;
+      refreshModalTasks(level.id);
+      modalExam.textContent = level.exam || '暂无考核标准';
+      modalResources.innerHTML = level.resources && level.resources.length
+        ? level.resources.map(function(r, ri) { return '<a href="' + r.url + '" target="_blank" class="res-link" onclick="recordResourceRead(' + level.id + ',' + ri + ')">' + r.name + '</a>'; }).join('')
+        : '<span style="color:var(--text-muted);font-size:13px;">暂无推荐资源</span>';
+      modalRequire.textContent = level.require;
+      modalDesc.textContent = level.produce;
+      window._currentQuiz = { level: level, idx: idx };
+      document.getElementById('modalInfo').style.display = '';
+      document.getElementById('modalQuiz').style.display = 'none';
+
+      // 考核按钮：只能考当前段位，已突破的可复习，未到的锁定
+      var btnQuiz = document.getElementById('btnStartQuiz');
+      if (idx > USER.level) {
+        btnQuiz.style.display = '';
+        btnQuiz.textContent = '先突破当前境界再来';
+        btnQuiz.disabled = true;
+        btnQuiz.style.background = 'transparent';
+        btnQuiz.style.color = 'var(--text-muted)';
+        btnQuiz.style.borderColor = 'var(--border)';
+        btnQuiz.style.cursor = 'not-allowed';
+      } else if (idx < USER.level) {
+        btnQuiz.style.display = '';
+        btnQuiz.textContent = '复习考核';
+        btnQuiz.disabled = false;
+        btnQuiz.style.background = 'transparent';
+        btnQuiz.style.color = 'var(--text)';
+        btnQuiz.style.borderColor = 'var(--border)';
+        btnQuiz.style.cursor = '';
+      } else {
+        btnQuiz.style.display = '';
+        btnQuiz.textContent = '开始考核';
+        btnQuiz.disabled = false;
+        btnQuiz.style.background = '';
+        btnQuiz.style.color = '';
+        btnQuiz.style.borderColor = '';
+        btnQuiz.style.cursor = '';
+      }
+
+      overlay.classList.add('open');
+    }
+
+    function closeModal() {
+      overlay.classList.remove('open');
+    }
+
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) closeModal();
+    });
+    document.getElementById('modalClose').addEventListener('click', closeModal);
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // 考核：开始
+    document.getElementById('btnStartQuiz').addEventListener('click', function() {
+      var q = window._currentQuiz;
+      // 从题库随机抽取题目
+      var picked = pickQuestions(q.level.id, 6);
+      if (!picked || picked.length === 0) {
+        alert('此境界暂未设置考核题目。');
+        return;
+      }
+      window._pickedQuiz = picked;
+
+      document.getElementById('modalInfo').style.display = 'none';
+      document.getElementById('modalQuiz').style.display = '';
+
+      var badge = document.getElementById('quizBadge');
+      badge.textContent = q.level.id;
+      badge.style.background = q.level.color;
+      document.getElementById('quizTitle').textContent = q.level.name + ' · 考核';
+
+      var html = '';
+      picked.forEach(function(qq, qi) {
+        html += '<div class="quiz-item" data-idx="' + qi + '">';
+        html += '<div class="quiz-question"><strong>' + (qi+1) + '.</strong> ' + qq.q.replace(/\n/g, '<br>') + '</div>';
+        html += '<div class="quiz-opts">';
+        qq.opts.forEach(function(o, oi) {
+          html += '<label class="quiz-opt"><input type="radio" name="q' + qi + '" value="' + oi + '"><span>' + 'ABCD'[oi] + '. ' + o + '</span></label>';
+        });
+        html += '</div>';
+        html += '<div class="quiz-tip">💡 ' + (qq.tip || '') + '</div>';
+        html += '</div>';
+      });
+      document.getElementById('quizQuestions').innerHTML = html;
+      document.querySelectorAll('.quiz-item').forEach(function(el) {
+        el.classList.remove('correct', 'wrong', 'show-tip');
+      });
+    });
+
+    // 考核：返回
+    document.getElementById('btnBackQuiz').addEventListener('click', function() {
+      document.getElementById('modalInfo').style.display = '';
+      document.getElementById('modalQuiz').style.display = 'none';
+    });
+
+    // 考核：提交
+    document.getElementById('btnSubmitQuiz').addEventListener('click', function() {
+      var exam = window._pickedQuiz;
+      var ctx = window._currentQuiz;
+      var correct = 0;
+      var total = exam.length;
+      var passScore = (ctx.idx === 0) ? 4 : Math.ceil(total * 0.75);
+
+      exam.forEach(function(qq, qi) {
+        var selected = document.querySelector('input[name="q' + qi + '"]:checked');
+        var itemEl = document.querySelector('.quiz-item[data-idx="' + qi + '"]');
+        if (!itemEl) return;
+        if (selected && parseInt(selected.value) === qq.ans) {
+          correct++;
+          itemEl.classList.add('correct');
+        } else {
+          itemEl.classList.add('wrong');
+          itemEl.classList.add('show-tip');
+        }
+      });
+
+      var container = document.getElementById('quizQuestions');
+      var existing = container.querySelector('.quiz-result');
+      if (existing) existing.remove();
+
+      var passed = correct >= passScore;
+      var msg = passed
+        ? (ctx.idx === 0 ? '✅ 通过。可以去修炼初段了。' : '通过。')
+        : (ctx.idx === 0 ? '未通过，再复习一下错题解析。' : '再看看错题，弄懂了再来。');
+
+      var resultHtml = '<div class="quiz-result">'
+        + '<div class="qr-score">' + correct + ' / ' + total + '</div>'
+        + '<div class="qr-pct" style="color:' + (passed ? 'var(--green)' : 'var(--seal)') + '">需 ' + passScore + '/' + total + ' 通过</div>'
+        + '<div class="qr-msg">' + msg + '</div>'
+        + '</div>';
+      container.insertAdjacentHTML('afterbegin', resultHtml);
+
+      // 记录修炼事件：每题正确 +2 theory，通过则额外奖励
+      exam.forEach(function(qq, qi) {
+        var sel = document.querySelector('input[name="q' + qi + '"]:checked');
+        if (sel && parseInt(sel.value) === qq.ans) {
+          recordEvent('quiz_correct', { desc: qq.q.substring(0, 30) });
+        }
+      });
+      if (passed) {
+        recordEvent('quiz_pass', { desc: ctx.level.name + ' 考核通过' });
+
+        // 通过当前段位考核 → 自动突破
+        if (ctx.idx === USER.level) {
+          levelUp();
+          showBreakthroughEffect(LEVELS[USER.level]);
+          refreshProgress();
+          refreshLevelList();
+        }
+      }
+    });
+  </script>
+</body>
+</html>

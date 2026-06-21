@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>我的修炼 · 编程修炼体系</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- 导航栏 -->
+  <nav class="navbar">
+    <div class="logo"><span class="logo-dot"></span>修炼录</div>
+    <div class="nav-links">
+      <a href="index.html">主页</a>
+      <a href="profile.html" class="active">我的</a>
+      <a href="messages.html">消息</a>
+      <a href="#" onclick="logout();return false" style="color:var(--text-muted);font-size:12px;margin-left:8px;">退出</a>
+    </div>
+  </nav>
+
+  <div class="container">
+
+    <!-- 个人资料卡 -->
+    <div class="profile-header">
+      <div class="profile-avatar profile-avatar-clickable" id="profileAvatar" onclick="document.getElementById('avatarFileInput').click()" title="点击更换头像">易</div>
+      <input type="file" id="avatarFileInput" accept="image/*" style="display:none">
+      <div class="profile-info">
+        <h2 id="userName"></h2>
+        <div class="profile-title" id="userTitle"></div>
+        <div class="profile-meta" id="profileMeta"></div>
+        <div class="profile-level" id="userLevel"></div>
+      </div>
+      <button class="profile-edit-btn" id="btnEditProfile">✎ 编辑</button>
+    </div>
+
+    <!-- 编辑资料卡片 -->
+    <div class="profile-edit-card" id="profileEditCard" style="display:none;">
+      <h3>编辑资料</h3>
+      <div class="edit-row">
+        <label>头像</label>
+        <button type="button" class="btn-upload-avatar" onclick="document.getElementById('avatarFileInput').click()">上传图片</button>
+        <span style="font-size:12px;color:var(--text-muted);margin-left:8px;">点击上传，自动裁为正方形</span>
+      </div>
+      <div class="edit-row">
+        <label>名字</label>
+        <input type="text" id="editName" placeholder="你的名字">
+      </div>
+      <div class="edit-row">
+        <label>性别</label>
+        <select id="editGender">
+          <option value="">不透露</option>
+          <option value="男">男</option>
+          <option value="女">女</option>
+        </select>
+      </div>
+      <div class="edit-row">
+        <label>年龄</label>
+        <input type="number" id="editAge" placeholder="年龄" min="1" max="120">
+      </div>
+      <div class="edit-row">
+        <label>联系方式</label>
+        <input type="text" id="editContact" placeholder="邮箱 / 微信 / QQ">
+      </div>
+      <div class="edit-actions">
+        <button class="btn-save" id="btnSaveProfile">保存</button>
+        <button class="btn-cancel" id="btnCancelProfile">取消</button>
+      </div>
+    </div>
+
+    <!-- 战力属性 -->
+    <div class="stats-section">
+      <h3>修炼战力</h3>
+      <div id="statsList"></div>
+    </div>
+
+    <!-- 专精方向 -->
+    <div class="stats-section">
+      <h3>专精方向</h3>
+      <div class="badge-grid" id="specList"></div>
+    </div>
+
+    <!-- 感悟 -->
+    <h3>感悟</h3>
+    <p class="page-sub">记录每一次成长</p>
+
+    <!-- 感悟编辑器 -->
+    <div class="journal-editor" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;margin-bottom:18px;box-shadow:var(--shadow);">
+      <input type="text" id="journalTitle" placeholder="感悟标题，例如：我终于理解了递归" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:4px;font-size:14px;font-family:inherit;background:var(--bg);color:var(--text);margin-bottom:8px;">
+      <textarea id="journalBody" rows="4" placeholder="写写这次突破经历了什么、踩了什么坑、学到了什么……" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:4px;font-size:14px;font-family:inherit;background:var(--bg);color:var(--text);resize:vertical;margin-bottom:8px;"></textarea>
+      <button id="btnSaveJournal" style="padding:8px 20px;border:1px solid var(--seal);background:var(--seal);color:#fff;font-size:13px;cursor:pointer;border-radius:4px;font-family:inherit;">写下感悟</button>
+      <span id="journalMsg" style="margin-left:12px;font-size:13px;color:var(--green);display:none;">已记录！</span>
+    </div>
+
+    <div id="journalList"></div>
+
+  </div>
+
+  <div class="footer">
+    计算机修行录 · 记录每一次突破
+  </div>
+
+  <script src="js/data.js"></script>
+  <script>
+    // ===== 用户信息 =====
+    function refreshProfileDisplay() {
+      var avatarEl = document.getElementById('profileAvatar');
+      var av = USER.avatar || USER.name.charAt(0);
+      if (av.indexOf('data:image') === 0) {
+        avatarEl.innerHTML = '<img src="' + av + '" alt="头像" class="avatar-img">';
+        avatarEl.className = 'profile-avatar profile-avatar-clickable avatar-has-img';
+      } else {
+        avatarEl.textContent = av;
+        avatarEl.className = 'profile-avatar profile-avatar-clickable';
+      }
+      document.getElementById('userName').textContent = USER.name;
+
+      var parts = [];
+      if (USER.gender) parts.push(USER.gender);
+      if (USER.age) parts.push(USER.age + '岁');
+      if (USER.contact) parts.push('✉ ' + USER.contact);
+      document.getElementById('profileMeta').textContent = parts.join(' · ') || '点击右上角编辑，完善个人资料';
+
+      document.getElementById('userTitle').textContent = USER.level === 0 ? '入门 · 还没有段位' : USER.title + ' · 第 ' + USER.level + ' 段';
+      document.getElementById('userLevel').textContent = '当前：' + LEVELS[USER.level].name;
+    }
+    refreshProfileDisplay();
+
+    // ===== 编辑资料 =====
+    document.getElementById('btnEditProfile').addEventListener('click', function() {
+      document.getElementById('editName').value = USER.name;
+      document.getElementById('editGender').value = USER.gender || '';
+      document.getElementById('editAge').value = USER.age || '';
+      document.getElementById('editContact').value = USER.contact || '';
+      document.getElementById('profileEditCard').style.display = '';
+      document.getElementById('btnEditProfile').style.display = 'none';
+    });
+
+    document.getElementById('btnSaveProfile').addEventListener('click', function() {
+      var newName = document.getElementById('editName').value.trim();
+      if (newName) USER.name = newName;
+      USER.gender = document.getElementById('editGender').value;
+      USER.age = document.getElementById('editAge').value;
+      USER.contact = document.getElementById('editContact').value.trim();
+
+      refreshProfileDisplay();
+      persistAll();
+
+      document.getElementById('profileEditCard').style.display = 'none';
+      document.getElementById('btnEditProfile').style.display = '';
+    });
+
+    document.getElementById('btnCancelProfile').addEventListener('click', function() {
+      document.getElementById('profileEditCard').style.display = 'none';
+      document.getElementById('btnEditProfile').style.display = '';
+    });
+
+    // ===== 头像上传 =====
+    document.getElementById('avatarFileInput').addEventListener('change', function() {
+      var file = this.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) { alert('图片不能超过 2MB'); return; }
+
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        var img = new Image();
+        img.onload = function() {
+          var canvas = document.createElement('canvas');
+          var outSize = 256;
+          canvas.width = outSize;
+          canvas.height = outSize;
+          var ctx = canvas.getContext('2d');
+          // 取原图最大正方形区域（居中），缩放到 256×256
+          var crop = Math.min(img.width, img.height);
+          var sx = (img.width - crop) / 2;
+          var sy = (img.height - crop) / 2;
+          ctx.drawImage(img, sx, sy, crop, crop, 0, 0, outSize, outSize);
+
+          USER.avatar = canvas.toDataURL('image/jpeg', 0.6);  // 压缩以减少 localStorage 占用
+          refreshProfileDisplay();
+          persistAll();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+      this.value = '';  // 允许重复选同一文件
+    });
+
+    // ===== 渲染属性 =====
+    const statNames = {
+      coding: '编程能力',
+      project: '项目经验',
+      theory: '理论知识',
+      tools: '工具掌握'
+    };
+    const statClasses = {
+      coding: 'fill-coding',
+      project: 'fill-project',
+      theory: 'fill-theory',
+      tools: 'fill-tool'
+    };
+    const statsEl = document.getElementById('statsList');
+    Object.entries(USER.stats).forEach(([key, val]) => {
+      statsEl.innerHTML += `
+        <div class="stat-item">
+          <div class="stat-label">
+            <span>${statNames[key]}</span>
+            <span>${val}/100</span>
+          </div>
+          <div class="stat-bar">
+            <div class="stat-fill ${statClasses[key]}" style="width:${val}%"></div>
+          </div>
+        </div>
+      `;
+    });
+
+    // ===== 渲染专精方向 =====
+    const specEl = document.getElementById('specList');
+    if (USER.specializations.length === 0) {
+      specEl.innerHTML = '<p style="color:var(--text-dim);font-size:14px;">突破到更高段位后解锁专精方向。</p>';
+    } else {
+      USER.specializations.forEach(spec => {
+        specEl.innerHTML += `
+          <div class="badge-item ${spec.unlocked ? 'unlocked' : 'locked'}">
+            <div class="badge-icon">${spec.icon}</div>
+            <div class="badge-name">${spec.name}</div>
+          </div>
+        `;
+      });
+    }
+
+    // ===== 写感悟 =====
+    document.getElementById('btnSaveJournal').addEventListener('click', function() {
+      var title = document.getElementById('journalTitle').value.trim();
+      var body = document.getElementById('journalBody').value.trim();
+      if (!title || !body) return;
+
+      USER.journals.unshift({
+        title: title,
+        body: body,
+        date: new Date().toISOString().slice(0, 10)
+      });
+
+      recordEvent('journal_write', { desc: title });
+
+      document.getElementById('journalTitle').value = '';
+      document.getElementById('journalBody').value = '';
+
+      var msg = document.getElementById('journalMsg');
+      msg.style.display = 'inline';
+      setTimeout(function() { msg.style.display = 'none'; }, 2000);
+
+      refreshStats();
+      refreshJournals();
+    });
+
+    function refreshStats() {
+      var el = document.getElementById('statsList');
+      if (!el) return;
+      el.innerHTML = '';
+      var sn = { coding: '编程能力', project: '项目经验', theory: '理论知识', tools: '工具掌握' };
+      var sc = { coding: 'fill-coding', project: 'fill-project', theory: 'fill-theory', tools: 'fill-tool' };
+      Object.keys(USER.stats).forEach(function(key) {
+        var val = USER.stats[key];
+        el.innerHTML += '<div class="stat-item">' +
+          '<div class="stat-label"><span>' + sn[key] + '</span><span>' + val + '/100</span></div>' +
+          '<div class="stat-bar"><div class="stat-fill ' + sc[key] + '" style="width:' + val + '%"></div></div>' +
+          '</div>';
+      });
+    }
+
+    function deleteJournal(index) {
+      USER.journals.splice(index, 1);
+      persistAll();
+      refreshJournals();
+    }
+
+    function refreshJournals() {
+      var el = document.getElementById('journalList');
+      if (USER.journals.length === 0) {
+        el.innerHTML = '<p style="color:var(--text-dim);font-size:14px;">还没有感悟，去写第一篇吧。</p>';
+      } else {
+        el.innerHTML = USER.journals.map(function(e, i) {
+          return '<div class="journal-entry">' +
+            '<div class="entry-header">' +
+            '<div class="entry-title">' + e.title + '</div>' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+            '<div class="entry-date">' + e.date + '</div>' +
+            '<button class="journal-del-btn" onclick="deleteJournal(' + i + ')" title="删除此感悟">✕</button>' +
+            '</div>' +
+            '</div>' +
+            '<div class="entry-body">' + e.body + '</div>' +
+            '</div>';
+        }).join('');
+      }
+    }
+
+    // 初始渲染
+    refreshJournals();
+  </script>
+</body>
+</html>

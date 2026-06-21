@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 · 计算机修行录</title>
+  <style>
+    :root {
+      --bg: #fafaf9; --bg-card: #fff; --text: #1c1917; --text-dim: #78716c;
+      --text-muted: #a8a29e; --border: #e7e5e4; --seal: #c0392b; --radius: 8px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #000; --bg-card: #0d0d0d; --text: #f5f5f5; --text-dim: #888;
+        --text-muted: #555; --border: #222; --seal: #d44a44;
+      }
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    }
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 40px 32px; width: 360px; max-width: 90vw;
+    }
+    .card h1 { font-size: 22px; text-align: center; margin-bottom: 4px; }
+    .card .sub { color: var(--text-dim); font-size: 13px; text-align: center; margin-bottom: 28px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 4px; }
+    .field input {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 4px;
+      font-size: 15px; font-family: inherit; background: var(--bg); color: var(--text);
+    }
+    .field input:focus { outline: none; border-color: var(--seal); }
+    .btn {
+      width: 100%; padding: 12px; border: none; border-radius: 4px;
+      background: var(--seal); color: #fff; font-size: 15px; cursor: pointer;
+      font-family: inherit; margin-top: 8px;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn-ghost {
+      width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 4px;
+      background: transparent; color: var(--text-dim); font-size: 14px; cursor: pointer;
+      font-family: inherit; margin-top: 8px;
+    }
+    .error { color: var(--seal); font-size: 13px; text-align: center; margin-top: 8px; min-height: 20px; }
+    .toggle { text-align: center; margin-top: 16px; font-size: 13px; color: var(--text-dim); }
+    .toggle a { color: var(--seal); cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1 id="formTitle">登录</h1>
+    <div class="sub">计算机修行录</div>
+
+    <!-- 登录表单 -->
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="field">
+        <label>用户名</label>
+        <input type="text" id="loginUser" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label>密码</label>
+        <input type="password" id="loginPass" autocomplete="current-password" required>
+      </div>
+      <button class="btn" type="submit">登 录</button>
+    </form>
+
+    <!-- 注册表单 -->
+    <form id="registerForm" style="display:none" onsubmit="handleRegister(event)">
+      <div class="field">
+        <label>用户名</label>
+        <input type="text" id="regUser" autocomplete="username" required minlength="1" maxlength="32">
+      </div>
+      <div class="field">
+        <label>密码（至少4位）</label>
+        <input type="password" id="regPass" autocomplete="new-password" required minlength="4">
+      </div>
+      <button class="btn" type="submit">注 册</button>
+    </form>
+
+    <div class="error" id="errorMsg"></div>
+    <div class="toggle">
+      <span id="toggleText">没有账号？</span>
+      <a id="toggleLink" onclick="toggleForm()">注册</a>
+    </div>
+  </div>
+
+  <script>
+    var API_BASE = (function() {
+      var o = window.location.origin;
+      if (o.indexOf('file:') === 0 || o.indexOf('127.0.0.1') >= 0 || o.indexOf('localhost') >= 0)
+        return 'http://127.0.0.1:8001';
+      return o;
+    })();
+
+    var isRegister = false;
+
+    function toggleForm() {
+      isRegister = !isRegister;
+      document.getElementById('loginForm').style.display = isRegister ? 'none' : '';
+      document.getElementById('registerForm').style.display = isRegister ? '' : 'none';
+      document.getElementById('formTitle').textContent = isRegister ? '注册' : '登录';
+      document.getElementById('toggleText').textContent = isRegister ? '已有账号？' : '没有账号？';
+      document.getElementById('toggleLink').textContent = isRegister ? '登录' : '注册';
+      document.getElementById('errorMsg').textContent = '';
+    }
+
+    function showError(msg) {
+      document.getElementById('errorMsg').textContent = msg;
+    }
+
+    function saveAuth(token, user) {
+      localStorage.setItem('cultivation_token', token);
+      localStorage.setItem('cultivation_user', JSON.stringify(user));
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      showError('');
+      var u = document.getElementById('loginUser').value.trim();
+      var p = document.getElementById('loginPass').value;
+      if (!u || !p) { showError('请填写用户名和密码'); return; }
+
+      try {
+        var res = await fetch(API_BASE + '/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: u, password: p })
+        });
+        if (!res.ok) {
+          var err = await res.json();
+          showError(err.detail || '登录失败');
+          return;
+        }
+        var data = await res.json();
+        saveAuth(data.token, data.user);
+        window.location.href = 'index.html';
+      } catch(e) { showError('网络错误，请检查后端是否启动'); }
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      showError('');
+      var u = document.getElementById('regUser').value.trim();
+      var p = document.getElementById('regPass').value;
+      if (!u || !p) { showError('请填写用户名和密码'); return; }
+      if (p.length < 4) { showError('密码至少4位'); return; }
+
+      try {
+        var res = await fetch(API_BASE + '/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: u, password: p })
+        });
+        if (!res.ok) {
+          var err = await res.json();
+          showError(err.detail || '注册失败');
+          return;
+        }
+        var data = await res.json();
+        saveAuth(data.token, data.user);
+        window.location.href = 'index.html';
+      } catch(e) { showError('网络错误，请检查后端是否启动'); }
+    }
+  </script>
+</body>
+</html>
