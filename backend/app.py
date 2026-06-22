@@ -260,7 +260,7 @@ def init_db():
         if "expires_at" not in cols:
             try:
                 conn.execute(
-                    "ALTER TABLE tokens ADD COLUMN expires_at TEXT DEFAULT (datetime('now', '+7 days'))"
+                    "ALTER TABLE tokens ADD COLUMN expires_at TEXT"
                 )
                 conn.commit()
                 cols = [row["name"] for row in conn.execute("PRAGMA table_info(tokens)")]
