@@ -561,7 +561,11 @@ function recordEvent(type, details) {
     });
   }
 
-  persistAll();
+  if (details._localOnly) {
+    saveLocalOnly();
+  } else {
+    persistAll();
+  }
   return event;
 }
 
@@ -610,6 +614,54 @@ function persistAll() {
   });
 }
 
+// 仅保存到 localStorage，不调用后端全量同步
+function saveLocalOnly() {
+  var payload = {
+    user: {
+      name: USER.name,
+      avatar: USER.avatar,
+      title: USER.title,
+      level: USER.level,
+      gender: USER.gender,
+      age: USER.age,
+      contact: USER.contact,
+      joinedDate: USER.joinedDate,
+      specializations: USER.specializations,
+      journals: USER.journals,
+      completedTasks: USER.completedTasks
+    },
+    events: EVENT_LOG,
+    messages: MESSAGES,
+    _msgCounter: _msgCounter
+  };
+  saveData(payload);
+  localStorage.setItem(STORAGE_KEY + '_mtime', new Date().toISOString());
+}
+
+// 后端任务完成接口
+function apiCompleteTask(levelId, taskIdx) {
+  return apiFetch(API_BASE + '/api/tasks/complete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ level_id: levelId, task_idx: taskIdx })
+  }).then(function(r) {
+    if (!r.ok) return r.json().then(function(err) { return { ok: false, error: err }; });
+    return r.json();
+  }).catch(function() { return { ok: false }; });
+}
+
+// 后端任务取消接口
+function apiUndoTask(levelId, taskIdx) {
+  return apiFetch(API_BASE + '/api/tasks/undo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ level_id: levelId, task_idx: taskIdx })
+  }).then(function(r) {
+    if (!r.ok) return r.json().then(function(err) { return { ok: false, error: err }; });
+    return r.json();
+  }).catch(function() { return { ok: false }; });
+}
+
 // ============================================================
 // 关卡完成/取消
 // ============================================================
@@ -617,22 +669,40 @@ function toggleTask(levelId, taskIdx) {
   var key = levelId + '-' + taskIdx;
   var idx = USER.completedTasks.indexOf(key);
   if (idx >= 0) {
-    // 取消完成
-    USER.completedTasks.splice(idx, 1);
-    removeEventByRef('task_done', key);
+    // 取消完成：先调后端，成功再更新本地
+    return apiUndoTask(levelId, taskIdx).then(function(res) {
+      if (!res || !res.ok) return false;
+      USER.completedTasks.splice(idx, 1);
+      // 删除对应的本地事件
+      for (var i = EVENT_LOG.length - 1; i >= 0; i--) {
+        if (EVENT_LOG[i].type === 'task_done' && EVENT_LOG[i].ref === key) {
+          EVENT_LOG.splice(i, 1);
+          break;
+        }
+      }
+      USER.stats = calcStats(USER.level, EVENT_LOG);
+      USER.progress = calcProgress(USER.level, USER.completedTasks);
+      saveLocalOnly();
+      return true;
+    });
   } else {
-    // 标记完成
-    USER.completedTasks.push(key);
-    var reward = getTaskReward(levelId);
-    var taskDesc = (LEVELS[levelId].tasks[taskIdx] || '').substring(0, 40);
-    recordEvent('task_done', {
-      value: reward,
-      ref: key,
-      desc: taskDesc
+    // 标记完成：先调后端，成功再更新本地
+    return apiCompleteTask(levelId, taskIdx).then(function(res) {
+      if (!res || !res.ok) return false;
+      USER.completedTasks.push(key);
+      var taskDesc = (LEVELS[levelId].tasks[taskIdx] || '').substring(0, 40);
+      recordEvent('task_done', {
+        value: res.reward,
+        ref: key,
+        desc: taskDesc,
+        _localOnly: true
+      });
+      USER.progress = calcProgress(USER.level, USER.completedTasks);
+      USER.stats = res.stats || calcStats(USER.level, EVENT_LOG);
+      saveLocalOnly();
+      return true;
     });
   }
-  USER.progress = calcProgress(USER.level, USER.completedTasks);
-  persistAll();
 }
 
 // 检查某个关卡是否已完成

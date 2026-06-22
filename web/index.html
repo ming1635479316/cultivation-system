@@ -156,9 +156,10 @@
     function handleTaskClick(levelId, taskIdx) {
       // 已完成的直接取消
       if (isTaskDone(levelId, taskIdx)) {
-        toggleTask(levelId, taskIdx);
-        refreshModalTasks(levelId);
-        refreshProgress();
+        toggleTask(levelId, taskIdx).then(function() {
+          refreshModalTasks(levelId);
+          refreshProgress();
+        });
         return;
       }
       // 未完成 → 查验证题
@@ -202,10 +203,11 @@
         var answer = parseInt(sel.value);
         if (answer === check.ans) {
           // 答对
-          toggleTask(t.levelId, t.taskIdx);
-          refreshModalTasks(t.levelId);
-          refreshProgress();
-          closeTaskCheck();
+          toggleTask(t.levelId, t.taskIdx).then(function() {
+            refreshModalTasks(t.levelId);
+            refreshProgress();
+            closeTaskCheck();
+          });
         } else {
           // 答错
           var fb = document.getElementById('taskCheckFeedback');
@@ -215,10 +217,11 @@
         }
       } else {
         // 无客观题，直接确认
-        toggleTask(t.levelId, t.taskIdx);
-        refreshModalTasks(t.levelId);
-        refreshProgress();
-        closeTaskCheck();
+        toggleTask(t.levelId, t.taskIdx).then(function() {
+          refreshModalTasks(t.levelId);
+          refreshProgress();
+          closeTaskCheck();
+        });
       }
     }
 

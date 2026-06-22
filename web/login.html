@@ -117,6 +117,38 @@
       localStorage.setItem('cultivation_user', JSON.stringify(user));
     }
 
+    async function tryAutoLogin() {
+      var token = localStorage.getItem('cultivation_token');
+      if (!token) return;
+
+      // 显示正在自动登录的提示
+      document.getElementById('loginForm').style.display = 'none';
+      document.getElementById('registerForm').style.display = 'none';
+      document.getElementById('toggleText').style.display = 'none';
+      document.getElementById('toggleLink').style.display = 'none';
+      document.getElementById('formTitle').textContent = '正在进入';
+      showError('检测到已登录账号，正在进入...');
+
+      try {
+        var res = await fetch(API_BASE + '/api/state', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (res.ok) {
+          window.location.href = 'index.html';
+          return;
+        }
+        // token 已过期或无效，清空后回到登录页
+      } catch(e) {}
+
+      localStorage.removeItem('cultivation_token');
+      localStorage.removeItem('cultivation_user');
+      document.getElementById('loginForm').style.display = '';
+      document.getElementById('toggleText').style.display = '';
+      document.getElementById('toggleLink').style.display = '';
+      document.getElementById('formTitle').textContent = '登录';
+      showError('登录已过期，请重新登录');
+    }
+
     async function handleLogin(e) {
       e.preventDefault();
       showError('');
@@ -165,6 +197,9 @@
         window.location.href = 'index.html';
       } catch(e) { showError('网络错误，请检查后端是否启动'); }
     }
+
+    // 页面加载时尝试自动登录
+    tryAutoLogin();
   </script>
 </body>
 </html>
