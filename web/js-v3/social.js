@@ -1,0 +1,84 @@
+/* ===== 计算机修行录 - 社交功能共享工具 v3.1 ===== */
+
+// 相对时间格式化
+function formatTime(iso) {
+  if (!iso) return '';
+  var now = Date.now();
+  var then = new Date(iso + (iso.endsWith('Z') ? '' : 'Z')).getTime();
+  var diff = Math.floor((now - then) / 1000);
+  if (diff < 60) return '刚刚';
+  if (diff < 3600) return Math.floor(diff / 60) + '分钟前';
+  if (diff < 86400) return Math.floor(diff / 3600) + '小时前';
+  if (diff < 604800) return Math.floor(diff / 86400) + '天前';
+  return iso.slice(0, 10);
+}
+
+// HTML 转义（防 XSS）
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+}
+
+// 用户小头像+名字 HTML 片段
+function renderAuthor(user, showLevel) {
+  if (!user) return '';
+  var avatar = (user.avatar || user.name || '?')[0];
+  var name = escapeHtml(user.name || user.username || '?');
+  var levelBadge = '';
+  if (showLevel !== false) {
+    var title = user.title || '修炼者';
+    var level = (user.level !== undefined) ? user.level : 0;
+    levelBadge = '<span class="author-level">' + title + ' · Lv.' + level + '</span>';
+  }
+  return '<span class="author-chip" onclick="event.stopPropagation();location.href=\'user.html?id=' + (user.id || user.user_id) + '\'">'
+    + '<span class="author-avatar">' + escapeHtml(avatar) + '</span>'
+    + '<span class="author-name">' + name + '</span>'
+    + levelBadge + '</span>';
+}
+
+// 投票按钮 HTML
+function renderVoteButtons(targetType, targetId, currentScore, userVote) {
+  currentScore = currentScore || 0;
+  userVote = userVote || 0;
+  var upCls = userVote === 1 ? ' voted' : '';
+  var downCls = userVote === -1 ? ' voted' : '';
+  return '<span class="vote-group" data-type="' + targetType + '" data-id="' + targetId + '">'
+    + '<button class="vote-btn vote-up' + upCls + '">▲</button>'
+    + '<span class="vote-score">' + currentScore + '</span>'
+    + '<button class="vote-btn vote-down' + downCls + '">▼</button>'
+    + '</span>';
+}
+
+// 委托投票事件绑定
+function bindVoteEvents(container, onVoteDone) {
+  if (!container) return;
+  container.querySelectorAll('.vote-btn').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      e.preventDefault();
+      var group = btn.closest('.vote-group');
+      var targetType = group.dataset.type;
+      var targetId = parseInt(group.dataset.id);
+      var value = btn.classList.contains('vote-up') ? 1 : -1;
+      api.vote(targetType, targetId, value).then(function(res) {
+        if (res && res.ok !== false) {
+          group.querySelector('.vote-score').textContent = res.vote_score;
+          var upBtn = group.querySelector('.vote-up');
+          var downBtn = group.querySelector('.vote-down');
+          upBtn.classList.toggle('voted', res.user_vote === 1);
+          downBtn.classList.toggle('voted', res.user_vote === -1);
+          if (onVoteDone) onVoteDone(res);
+        }
+      }).catch(function() {});
+    });
+  });
+}
+
+// 标签徽章 HTML
+function renderTags(tags) {
+  if (!tags || !tags.length) return '';
+  return tags.map(function(t) {
+    return '<span class="tag-pill">' + escapeHtml(t) + '</span>';
+  }).join('');
+}

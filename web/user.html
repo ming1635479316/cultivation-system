@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>用户主页 · 计算机修行录</title>
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="logo"><span class="logo-dot"></span>修炼录</div>
+  <div class="nav-links">
+    <a href="index.html">主页</a>
+    <a href="community.html">社区</a>
+    <a href="leaderboard.html">排行</a>
+    <a href="dms.html">私信</a>
+    <a href="profile.html">我的</a>
+    <a href="messages.html">消息</a>
+    <a href="#" onclick="logout();return false" style="color:var(--text-muted);font-size:12px;margin-left:8px;">退出</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div id="profileContent"></div>
+</div>
+
+<script src="js-v3/api.js"></script>
+<script src="js-v3/constants.js"></script>
+<script src="js-v3/store.js"></script>
+<script src="js-v3/social.js"></script>
+<script>
+var userId = parseInt(new URLSearchParams(location.search).get('id'));
+
+var STAT_LABELS = { coding: '编程能力', project: '项目经验', theory: '理论知识', tools: '工具掌握' };
+var STAT_COLORS = { coding: '#78716c', project: 'var(--green)', theory: '#6b6b8a', tools: 'var(--gold)' };
+
+function loadProfile() {
+  if (!userId) {
+    document.getElementById('profileContent').innerHTML = '<p style="color:var(--seal);text-align:center;padding:40px;">用户不存在</p>';
+    return;
+  }
+
+  api.getPublicProfile(userId).then(function(data) {
+    if (!data.user) return;
+    var u = data.user;
+    document.title = (u.name || u.username) + ' · 修炼录';
+
+    var html = '';
+    // 头像区
+    html += '<div class="profile-header">';
+    html += '<div class="profile-avatar" style="background:var(--seal-light);color:var(--seal);">' + escapeHtml((u.avatar || u.name || '?')[0]) + '</div>';
+    html += '<div class="profile-info">';
+    html += '<h2>' + escapeHtml(u.name || u.username) + '</h2>';
+    html += '<p style="color:var(--text-dim);">' + escapeHtml(u.title || '修炼者') + ' · 第' + (u.level || 0) + '段</p>';
+    if (u.gender || u.age) html += '<p style="font-size:13px;color:var(--text-muted);">' + [u.gender, u.age].filter(Boolean).join(' · ') + '</p>';
+    if (u.contact) html += '<p style="font-size:13px;color:var(--text-muted);">📧 ' + escapeHtml(u.contact) + '</p>';
+    html += '<p style="font-size:12px;color:var(--text-muted);">加入于 ' + (u.joinedDate || '?') + '</p>';
+    html += '<a href="dms.html?to=' + u.id + '" class="btn-save" style="display:inline-block;margin-top:8px;text-decoration:none;font-size:13px;">✉ 发送私信</a>';
+    html += '</div></div>';
+
+    // 战力
+    var stats = data.stats || {};
+    html += '<div class="card" style="margin-top:16px;"><h3>修炼战力</h3>';
+    Object.keys(STAT_LABELS).forEach(function(k) {
+      var v = stats[k] || 0;
+      html += '<div class="stat-item"><div class="stat-label">' + STAT_LABELS[k] + '</div>'
+        + '<div class="stat-bar"><div class="stat-fill" style="width:' + v + '%;background:' + STAT_COLORS[k] + ';"></div></div>'
+        + '<span class="stat-val">' + v + '/100</span></div>';
+    });
+    html += '</div>';
+
+    // 专精
+    var specs = u.specializations || [];
+    if (specs.length) {
+      html += '<div class="card" style="margin-top:16px;"><h3>专精方向</h3><div class="badge-grid">';
+      specs.forEach(function(s) {
+        html += '<div class="badge-item' + (s.unlocked ? ' unlocked' : '') + '"><span>' + (s.icon || '?') + '</span><span>' + escapeHtml(s.name) + '</span></div>';
+      });
+      html += '</div></div>';
+    }
+
+    // 最近帖子
+    var posts = data.recentPosts || [];
+    html += '<div class="card" style="margin-top:16px;"><h3>近期帖子</h3>';
+    if (!posts.length) {
+      html += '<p style="color:var(--text-dim);font-size:13px;">暂无帖子</p>';
+    } else {
+      posts.forEach(function(p) {
+        var typeLabel = p.type === 'question' ? '问答' : '文章';
+        html += '<div class="mini-post" onclick="location.href=\'post.html?id=' + p.id + '\'" style="padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;">'
+          + '<span class="post-type-badge ' + (p.type === 'question' ? 'type-q' : 'type-a') + '" style="font-size:11px;">' + typeLabel + '</span>'
+          + '<span style="margin-left:8px;">' + escapeHtml(p.title) + '</span>'
+          + '<span style="float:right;font-size:12px;color:var(--text-dim);">👍 ' + (p.vote_score || 0) + ' 💬 ' + (p.comment_count || 0) + '</span>'
+          + '</div>';
+      });
+    }
+    html += '</div>';
+
+    document.getElementById('profileContent').innerHTML = html;
+  }).catch(function() {
+    document.getElementById('profileContent').innerHTML = '<p style="color:var(--seal);text-align:center;padding:40px;">加载失败</p>';
+  });
+}
+
+initStore(function() { loadProfile(); });
+</script>
+</body>
+</html>

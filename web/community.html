@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>修炼社区 · 计算机修行录</title>
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="logo"><span class="logo-dot"></span>修炼录</div>
+  <div class="nav-links">
+    <a href="index.html">主页</a>
+    <a href="community.html" class="active">社区</a>
+    <a href="leaderboard.html">排行</a>
+    <a href="dms.html">私信</a>
+    <a href="profile.html">我的</a>
+    <a href="messages.html">消息</a>
+    <a href="#" onclick="logout();return false" style="color:var(--text-muted);font-size:12px;margin-left:8px;">退出</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-title">修炼社区</div>
+  <p class="page-sub">分享知识，共同精进</p>
+
+  <!-- 排序标签 -->
+  <div class="tab-bar" id="tabBar">
+    <button class="tab-btn active" data-sort="newest">最新</button>
+    <button class="tab-btn" data-sort="hot">热门</button>
+    <button class="tab-btn" data-sort="questions">问答</button>
+    <button class="tab-btn" data-sort="articles">文章</button>
+  </div>
+
+  <!-- 发帖按钮 -->
+  <button class="btn-save" id="btnShowForm" style="margin:12px 0;">+ 发布新帖</button>
+
+  <!-- 发帖表单 -->
+  <div class="card" id="postForm" style="display:none;margin-bottom:16px;">
+    <div class="form-row">
+      <label>标题</label>
+      <input type="text" id="postTitle" maxlength="200" placeholder="简明扼要地描述你的问题或分享" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text);">
+    </div>
+    <div class="form-row" style="margin-top:12px;">
+      <label>类型</label>
+      <select id="postType" style="padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text);">
+        <option value="question">问答</option>
+        <option value="article">文章</option>
+      </select>
+    </div>
+    <div class="form-row" style="margin-top:12px;">
+      <label>内容</label>
+      <textarea id="postContent" rows="6" maxlength="10000" placeholder="写下你想说的..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;resize:vertical;background:var(--bg-card);color:var(--text);"></textarea>
+    </div>
+    <div class="form-row" style="margin-top:12px;">
+      <label>标签（逗号分隔）</label>
+      <input type="text" id="postTags" maxlength="100" placeholder="如: Python, 后端, FastAPI" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text);">
+    </div>
+    <div class="form-actions" style="margin-top:12px;display:flex;gap:8px;">
+      <button class="btn-save" id="btnSubmitPost">发布</button>
+      <button class="btn-cancel" id="btnCancelPost">取消</button>
+    </div>
+    <div id="postFormMsg" style="margin-top:8px;font-size:13px;"></div>
+  </div>
+
+  <!-- 帖子列表 -->
+  <div id="postList"></div>
+
+  <!-- 加载更多 -->
+  <div style="text-align:center;margin:20px 0;">
+    <button class="btn-cancel" id="btnLoadMore" onclick="loadMore()" style="display:none;">加载更多</button>
+  </div>
+</div>
+
+<script src="js-v3/api.js"></script>
+<script src="js-v3/constants.js"></script>
+<script src="js-v3/store.js"></script>
+<script src="js-v3/social.js"></script>
+<script>
+// ---- 社区逻辑 ----
+var currentSort = 'newest';
+var currentPage = 1;
+
+function loadPosts(sort, page, append) {
+  sort = sort || currentSort;
+  page = page || 1;
+  currentSort = sort;
+  currentPage = page;
+
+  api.getPosts(sort, page).then(function(data) {
+    var list = document.getElementById('postList');
+    if (!append) list.innerHTML = '';
+
+    if (!data.posts || !data.posts.length) {
+      if (!append) list.innerHTML = '<p style="color:var(--text-dim);text-align:center;padding:40px;">还没有帖子，来发第一篇吧 ✍️</p>';
+      document.getElementById('btnLoadMore').style.display = 'none';
+      return;
+    }
+
+    data.posts.forEach(function(p) {
+      list.innerHTML += renderPostCard(p);
+    });
+
+    document.getElementById('btnLoadMore').style.display = data.posts.length >= 20 ? '' : 'none';
+    bindVoteEvents(document.getElementById('postList'), function(res) {
+      // 投票后更新分数
+      var group = document.querySelector('.vote-group[data-id="' + res.user_vote + '"]');
+    });
+  }).catch(function() {
+    document.getElementById('postList').innerHTML = '<p style="color:var(--seal);text-align:center;padding:40px;">加载失败，请检查网络后刷新</p>';
+  });
+}
+
+function renderPostCard(p) {
+  var typeLabel = p.type === 'question' ? '问答' : '文章';
+  var typeCls = p.type === 'question' ? 'type-q' : 'type-a';
+  var tags = (typeof p.tags === 'string' ? JSON.parse(p.tags || '[]') : (p.tags || []));
+  return '<div class="post-card" onclick="location.href=\'post.html?id=' + p.id + '\'">'
+    + '<div class="post-card-header">'
+    + renderAuthor(p.author)
+    + '<span class="post-time">' + formatTime(p.created_at) + '</span>'
+    + '</div>'
+    + '<h3 class="post-card-title">' + escapeHtml(p.title) + '</h3>'
+    + '<p class="post-card-preview">' + escapeHtml((p.content || '').substring(0, 200)) + '</p>'
+    + '<div class="post-card-footer">'
+    + '<span class="post-type-badge ' + typeCls + '">' + typeLabel + '</span>'
+    + renderTags(tags)
+    + renderVoteButtons('post', p.id, p.vote_score, p.user_vote || 0)
+    + '<span class="post-comment-count">💬 ' + (p.comment_count || 0) + '</span>'
+    + '</div></div>';
+}
+
+function loadMore() {
+  loadPosts(currentSort, currentPage + 1, true);
+}
+
+// 标签切换
+document.getElementById('tabBar').addEventListener('click', function(e) {
+  var btn = e.target.closest('.tab-btn');
+  if (!btn) return;
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  loadPosts(btn.dataset.sort);
+});
+
+// 发帖表单开关
+document.getElementById('btnShowForm').addEventListener('click', function() {
+  document.getElementById('postForm').style.display = '';
+  this.style.display = 'none';
+});
+
+document.getElementById('btnCancelPost').addEventListener('click', function() {
+  document.getElementById('postForm').style.display = 'none';
+  document.getElementById('btnShowForm').style.display = '';
+  document.getElementById('postFormMsg').textContent = '';
+});
+
+document.getElementById('btnSubmitPost').addEventListener('click', function() {
+  var title = document.getElementById('postTitle').value.trim();
+  var content = document.getElementById('postContent').value.trim();
+  var type = document.getElementById('postType').value;
+  var tagsStr = document.getElementById('postTags').value.trim();
+  var tags = tagsStr ? tagsStr.split(',').map(function(t) { return t.trim(); }).filter(Boolean) : [];
+  var msg = document.getElementById('postFormMsg');
+
+  if (!title) { msg.textContent = '请输入标题'; msg.style.color = 'var(--seal)'; return; }
+  if (!content) { msg.textContent = '请输入内容'; msg.style.color = 'var(--seal)'; return; }
+
+  var btn = document.getElementById('btnSubmitPost');
+  btn.disabled = true; btn.textContent = '发布中...';
+
+  api.createPost({ title: title, content: content, type: type, tags: tags }).then(function(res) {
+    msg.textContent = '✓ 发布成功！';
+    msg.style.color = 'var(--green)';
+    btn.disabled = false; btn.textContent = '发布';
+    document.getElementById('postTitle').value = '';
+    document.getElementById('postContent').value = '';
+    document.getElementById('postTags').value = '';
+    document.getElementById('postForm').style.display = 'none';
+    document.getElementById('btnShowForm').style.display = '';
+    loadPosts('newest', 1);
+  }).catch(function() {
+    msg.textContent = '发布失败，请重试';
+    msg.style.color = 'var(--seal)';
+    btn.disabled = false; btn.textContent = '发布';
+  });
+});
+
+// 启动
+initStore(function() {
+  loadPosts('newest', 1);
+});
+</script>
+</body>
+</html>

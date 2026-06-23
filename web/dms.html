@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>私信 · 计算机修行录</title>
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="logo"><span class="logo-dot"></span>修炼录</div>
+  <div class="nav-links">
+    <a href="index.html">主页</a>
+    <a href="community.html">社区</a>
+    <a href="leaderboard.html">排行</a>
+    <a href="dms.html" class="active">私信</a>
+    <a href="profile.html">我的</a>
+    <a href="messages.html">消息</a>
+    <a href="#" onclick="logout();return false" style="color:var(--text-muted);font-size:12px;margin-left:8px;">退出</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-title">私信</div>
+
+  <!-- 对话列表 -->
+  <div id="conversationList" style="margin-bottom:16px;"></div>
+
+  <!-- 聊天窗口 -->
+  <div id="chatWindow" style="display:none;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+      <button class="btn-cancel" onclick="closeChat()" style="font-size:13px;">← 返回</button>
+      <span id="chatPartnerName" style="font-weight:600;"></span>
+    </div>
+    <div id="chatMessages" style="max-height:50vh;overflow-y:auto;margin-bottom:12px;"></div>
+    <div style="display:flex;gap:8px;">
+      <input type="text" id="chatInput" maxlength="2000" placeholder="输入消息..." style="flex:1;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--bg-card);color:var(--text);">
+      <button class="btn-save" id="btnSendDM" style="font-size:13px;">发送</button>
+    </div>
+  </div>
+</div>
+
+<script src="js-v3/api.js"></script>
+<script src="js-v3/constants.js"></script>
+<script src="js-v3/store.js"></script>
+<script src="js-v3/social.js"></script>
+<script>
+var currentChatUser = null;
+var chatPollTimer = null;
+var lastMessageTime = '';
+
+// 对话列表
+function loadConversations() {
+  api.getConversations().then(function(data) {
+    var list = document.getElementById('conversationList');
+    var convs = data.conversations || [];
+    if (!convs.length) {
+      list.innerHTML = '<p style="color:var(--text-dim);text-align:center;padding:40px;">暂无对话</p>';
+      return;
+    }
+    list.innerHTML = convs.map(function(c) {
+      var u = c.otherUser;
+      var unreadBadge = c.unreadCount > 0 ? '<span class="unread-badge">' + c.unreadCount + '</span>' : '';
+      return '<div class="conv-item" onclick="openChat(' + u.id + ',\'' + escapeHtml(u.name || u.username) + '\')">'
+        + '<span class="conv-avatar">' + escapeHtml((u.avatar || u.name || '?')[0]) + '</span>'
+        + '<div class="conv-info">'
+        + '<span class="conv-name">' + escapeHtml(u.name || u.username) + unreadBadge + '</span>'
+        + '<span class="conv-preview">' + escapeHtml(c.lastMessage || '') + '</span>'
+        + '</div>'
+        + '<span class="conv-time">' + formatTime(c.lastTime) + '</span>'
+        + '</div>';
+    }).join('');
+  });
+}
+
+// 打开聊天
+function openChat(userId, name) {
+  currentChatUser = { id: userId, name: name };
+  lastMessageTime = '';
+  document.getElementById('conversationList').style.display = 'none';
+  document.getElementById('chatWindow').style.display = '';
+  document.getElementById('chatPartnerName').textContent = name;
+  document.getElementById('chatMessages').innerHTML = '';
+  fetchMessages();
+  // 开始 polling
+  if (chatPollTimer) clearInterval(chatPollTimer);
+  chatPollTimer = setInterval(fetchMessages, 5000);
+}
+
+function closeChat() {
+  currentChatUser = null;
+  if (chatPollTimer) { clearInterval(chatPollTimer); chatPollTimer = null; }
+  document.getElementById('chatWindow').style.display = 'none';
+  document.getElementById('conversationList').style.display = '';
+  loadConversations();
+}
+
+function fetchMessages() {
+  if (!currentChatUser) return;
+  var since = lastMessageTime || '';
+  api.getDMs(currentChatUser.id, since).then(function(data) {
+    var msgs = data.messages || [];
+    if (!msgs.length) return;
+
+    var container = document.getElementById('chatMessages');
+    var isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 60;
+
+    msgs.forEach(function(m) {
+      var cls = m.fromMe ? 'dm-bubble dm-from-me' : 'dm-bubble dm-from-other';
+      container.innerHTML += '<div class="' + cls + '">'
+        + '<div class="dm-text">' + escapeHtml(m.content) + '</div>'
+        + '<div class="dm-time">' + formatTime(m.created_at) + '</div>'
+        + '</div>';
+      lastMessageTime = m.created_at;
+    });
+
+    if (isAtBottom) container.scrollTop = container.scrollHeight;
+  });
+}
+
+// 发送消息
+document.getElementById('btnSendDM').addEventListener('click', function() {
+  if (!currentChatUser) return;
+  var content = document.getElementById('chatInput').value.trim();
+  if (!content) return;
+
+  var btn = document.getElementById('btnSendDM');
+  btn.disabled = true;
+  api.sendDM(currentChatUser.id, content).then(function() {
+    document.getElementById('chatInput').value = '';
+    btn.disabled = false;
+    fetchMessages();
+  }).catch(function() {
+    btn.disabled = false;
+  });
+});
+
+document.getElementById('chatInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    document.getElementById('btnSendDM').click();
+  }
+});
+
+// 启动：检查 URL 是否带有 ?to=X 参数
+function checkUrlParam() {
+  var toId = parseInt(new URLSearchParams(location.search).get('to'));
+  if (toId) {
+    // 延迟等 store 就绪后打开
+    setTimeout(function() {
+      api.getPublicProfile(toId).then(function(data) {
+        if (data.user) openChat(toId, data.user.name || data.user.username);
+      }).catch(function() {});
+    }, 500);
+  }
+}
+
+initStore(function() {
+  loadConversations();
+  checkUrlParam();
+});
+</script>
+</body>
+</html>

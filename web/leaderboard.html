@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>修炼排行榜 · 计算机修行录</title>
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="logo"><span class="logo-dot"></span>修炼录</div>
+  <div class="nav-links">
+    <a href="index.html">主页</a>
+    <a href="community.html">社区</a>
+    <a href="leaderboard.html" class="active">排行</a>
+    <a href="dms.html">私信</a>
+    <a href="profile.html">我的</a>
+    <a href="messages.html">消息</a>
+    <a href="#" onclick="logout();return false" style="color:var(--text-muted);font-size:12px;margin-left:8px;">退出</a>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-title">修炼排行榜</div>
+  <p class="page-sub">天下修士，谁与争锋</p>
+
+  <!-- Top 3 -->
+  <div id="top3" style="display:flex;gap:12px;justify-content:center;margin:24px 0;"></div>
+
+  <!-- 全量列表 -->
+  <div id="rankList"></div>
+</div>
+
+<script src="js-v3/api.js"></script>
+<script src="js-v3/constants.js"></script>
+<script src="js-v3/store.js"></script>
+<script src="js-v3/social.js"></script>
+<script>
+var MEDALS = ['🥇', '🥈', '🥉'];
+var LEVEL_COLORS = ['#6b6558','#57534e','#78716c','#575e6e','#4e6e5e','#8b7500','#b85c12','#c0392b','#8b1a1a','#1c1917'];
+
+function loadBoard() {
+  api.getLeaderboard().then(function(data) {
+    var board = data.leaderboard || [];
+    if (!board.length) {
+      document.getElementById('rankList').innerHTML = '<p style="text-align:center;color:var(--text-dim);padding:40px;">暂无数据</p>';
+      return;
+    }
+
+    // Top 3 特写
+    var top3 = board.slice(0, 3);
+    var top3html = '';
+    top3.forEach(function(entry, i) {
+      var order = [1, 0, 2]; // 银 金 铜 排列
+      var pos = order[i];
+      top3html += '<div class="top-card top-' + (pos + 1) + '" onclick="location.href=\'user.html?id=' + entry.id + '\'">'
+        + '<div class="top-medal">' + MEDALS[pos] + '</div>'
+        + '<div class="top-avatar" style="background:' + LEVEL_COLORS[Math.min(entry.level, 9)] + ';color:#fff;width:48px;height:48px;line-height:48px;border-radius:50%;text-align:center;font-size:20px;margin:0 auto;">' + escapeHtml((entry.avatar || entry.name || '?')[0]) + '</div>'
+        + '<div class="top-name">' + escapeHtml(entry.name || entry.username) + '</div>'
+        + '<div class="top-level">' + escapeHtml(entry.title) + ' · Lv.' + entry.level + '</div>'
+        + '<div class="top-stats">' + entry.totalStats + ' 战力</div>'
+        + '</div>';
+    });
+    document.getElementById('top3').innerHTML = top3html;
+
+    // 全量列表
+    var listHtml = '';
+    board.forEach(function(entry) {
+      var medalHtml = entry.rank <= 3 ? ' <span style="font-size:18px;">' + MEDALS[entry.rank - 1] + '</span>' : '';
+      listHtml += '<div class="lb-row" onclick="location.href=\'user.html?id=' + entry.id + '\'">'
+        + '<span class="lb-rank">#' + entry.rank + medalHtml + '</span>'
+        + '<span class="lb-avatar" style="background:' + LEVEL_COLORS[Math.min(entry.level, 9)] + ';color:#fff;">' + escapeHtml((entry.avatar || entry.name || '?')[0]) + '</span>'
+        + '<div class="lb-info">'
+        + '<span class="lb-name">' + escapeHtml(entry.name || entry.username) + '</span>'
+        + '<span class="lb-title">' + escapeHtml(entry.title) + '</span>'
+        + '</div>'
+        + '<span class="lb-level">Lv.' + entry.level + '</span>'
+        + '<span class="lb-stats">' + entry.totalStats + ' 战力</span>'
+        + '</div>';
+    });
+    document.getElementById('rankList').innerHTML = listHtml;
+  }).catch(function() {
+    document.getElementById('rankList').innerHTML = '<p style="color:var(--seal);text-align:center;padding:40px;">加载失败</p>';
+  });
+}
+
+initStore(function() { loadBoard(); });
+</script>
+</body>
+</html>

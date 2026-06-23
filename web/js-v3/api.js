@@ -158,5 +158,84 @@ var api = {
   deleteJournal: function(id) {
     return apiFetch(API_BASE + '/api/journals/' + id, { method: 'DELETE' })
       .then(function(r) { return r.json(); });
+  },
+
+  // ---- 社区帖子 ----
+  getPosts: function(sort, page, limit) {
+    var q = 'sort=' + (sort || 'newest') + '&page=' + (page || 1) + '&limit=' + (limit || 20);
+    return apiFetch(API_BASE + '/api/posts?' + q).then(function(r) { return r.json(); });
+  },
+  createPost: function(data) {
+    return apiFetch(API_BASE + '/api/posts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(function(r) { return r.json(); });
+  },
+  getPost: function(postId) {
+    return apiFetch(API_BASE + '/api/posts/' + postId).then(function(r) { return r.json(); });
+  },
+  updatePost: function(postId, data) {
+    return apiFetch(API_BASE + '/api/posts/' + postId, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(function(r) { return r.json(); });
+  },
+  deletePost: function(postId) {
+    return apiFetch(API_BASE + '/api/posts/' + postId, { method: 'DELETE' })
+      .then(function(r) { return r.json(); });
+  },
+
+  // ---- 评论 ----
+  getComments: function(postId) {
+    return apiFetch(API_BASE + '/api/posts/' + postId + '/comments')
+      .then(function(r) { return r.json(); });
+  },
+  addComment: function(postId, content, parentId) {
+    return apiFetch(API_BASE + '/api/posts/' + postId + '/comments', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content, parent_id: parentId || null })
+    }).then(function(r) { return r.json(); });
+  },
+  deleteComment: function(postId, commentId) {
+    return apiFetch(API_BASE + '/api/posts/' + postId + '/comments/' + commentId, { method: 'DELETE' })
+      .then(function(r) { return r.json(); });
+  },
+
+  // ---- 投票 ----
+  vote: function(targetType, targetId, value) {
+    return apiFetch(API_BASE + '/api/votes', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target_type: targetType, target_id: targetId, value: value })
+    }).then(function(r) { return r.json(); });
+  },
+
+  // ---- 用户搜索 & 公开主页 ----
+  searchUsers: function(q) {
+    return apiFetch(API_BASE + '/api/users/search?q=' + encodeURIComponent(q))
+      .then(function(r) { return r.json(); });
+  },
+  getPublicProfile: function(userId) {
+    return apiFetch(API_BASE + '/api/users/' + userId).then(function(r) { return r.json(); });
+  },
+
+  // ---- 私信 ----
+  getConversations: function() {
+    return apiFetch(API_BASE + '/api/dms/conversations').then(function(r) { return r.json(); });
+  },
+  getDMs: function(otherUserId, since) {
+    var url = API_BASE + '/api/dms/' + otherUserId + '?limit=50';
+    if (since) url += '&since=' + encodeURIComponent(since);
+    return apiFetch(url).then(function(r) { return r.json(); });
+  },
+  sendDM: function(otherUserId, content) {
+    return apiFetch(API_BASE + '/api/dms/' + otherUserId, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: content })
+    }).then(function(r) { return r.json(); });
+  },
+
+  // ---- 排行榜 ----
+  getLeaderboard: function() {
+    return apiFetch(API_BASE + '/api/leaderboard').then(function(r) { return r.json(); });
   }
 };

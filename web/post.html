@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>帖子 · 计算机修行录</title>
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="logo"><span class="logo-dot"></span>修炼录</div>
+  <div class="nav-links">
+    <a href="index.html">主页</a>
+    <a href="community.html">社区</a>
+    <a href="leaderboard.html">排行</a>
+    <a href="dms.html">私信</a>
+    <a href="profile.html">我的</a>
+    <a href="messages.html">消息</a>
+    <a href="#" onclick="logout();return false" style="color:var(--text-muted);font-size:12px;margin-left:8px;">退出</a>
+  </div>
+</nav>
+
+<div class="container">
+  <a href="community.html" style="color:var(--text-dim);font-size:13px;text-decoration:none;">← 返回社区</a>
+
+  <!-- 帖子主体 -->
+  <div id="postDetail" class="card" style="margin-top:12px;"></div>
+
+  <!-- 评论区 -->
+  <div style="margin-top:24px;">
+    <h3 style="margin-bottom:12px;">评论 (<span id="commentCount">0</span>)</h3>
+
+    <!-- 评论输入 -->
+    <div class="card" style="margin-bottom:16px;">
+      <textarea id="commentInput" rows="3" maxlength="2000" placeholder="写下你的评论..." style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;resize:vertical;background:var(--bg-card);color:var(--text);"></textarea>
+      <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+        <button class="btn-save" id="btnSubmitComment" style="font-size:13px;">发表评论</button>
+        <span id="replyHint" style="font-size:12px;color:var(--text-dim);display:none;">
+          回复 <strong id="replyToName"></strong>
+          <a href="#" onclick="cancelReply();return false;" style="color:var(--seal);margin-left:4px;">取消</a>
+        </span>
+      </div>
+    </div>
+
+    <!-- 评论列表 -->
+    <div id="commentList"></div>
+  </div>
+</div>
+
+<script src="js-v3/api.js"></script>
+<script src="js-v3/constants.js"></script>
+<script src="js-v3/store.js"></script>
+<script src="js-v3/social.js"></script>
+<script>
+var postId = parseInt(new URLSearchParams(location.search).get('id'));
+var replyTo = null; // { id, name }
+
+function loadPost() {
+  if (!postId) {
+    document.getElementById('postDetail').innerHTML = '<p style="color:var(--seal);">帖子不存在</p>';
+    return;
+  }
+
+  api.getPost(postId).then(function(data) {
+    if (!data.post) {
+      document.getElementById('postDetail').innerHTML = '<p style="color:var(--seal);">帖子不存在</p>';
+      return;
+    }
+    var p = data.post;
+    var tags = (typeof p.tags === 'string' ? JSON.parse(p.tags || '[]') : (p.tags || []));
+    var typeLabel = p.type === 'question' ? '问答' : '文章';
+    var typeCls = p.type === 'question' ? 'type-q' : 'type-a';
+
+    document.title = p.title + ' · 修炼社区';
+
+    var html = '<div class="post-detail-header">'
+      + renderAuthor(p.author)
+      + '<span class="post-time">' + formatTime(p.created_at) + '</span>'
+      + '</div>'
+      + '<h2 class="post-detail-title">' + escapeHtml(p.title) + '</h2>'
+      + '<span class="post-type-badge ' + typeCls + '">' + typeLabel + '</span>'
+      + renderTags(tags)
+      + '<div class="post-detail-content">' + escapeHtml(p.content).replace(/\n/g, '<br>') + '</div>'
+      + '<div class="post-detail-footer">'
+      + renderVoteButtons('post', p.id, p.vote_score, p.user_vote || 0)
+      + '</div>';
+
+    document.getElementById('postDetail').innerHTML = html;
+    bindVoteEvents(document.getElementById('postDetail'));
+  }).catch(function() {
+    document.getElementById('postDetail').innerHTML = '<p style="color:var(--seal);">加载失败</p>';
+  });
+}
+
+function loadComments() {
+  api.getComments(postId).then(function(data) {
+    var list = document.getElementById('commentList');
+    var count = 0;
+    list.innerHTML = '';
+
+    if (!data.comments || !data.comments.length) {
+      list.innerHTML = '<p style="color:var(--text-dim);text-align:center;padding:20px;">还没有评论，来说点什么吧</p>';
+      document.getElementById('commentCount').textContent = '0';
+      return;
+    }
+
+    data.comments.forEach(function(c) {
+      count += 1 + (c.replies ? c.replies.length : 0);
+      list.innerHTML += renderComment(c, false);
+    });
+
+    document.getElementById('commentCount').textContent = count;
+    bindVoteEvents(list);
+    bindReplyEvents(list);
+  }).catch(function() {
+    document.getElementById('commentList').innerHTML = '<p style="color:var(--seal);">加载评论失败</p>';
+  });
+}
+
+function renderComment(c, isReply) {
+  var indent = isReply ? ' comment-reply' : '';
+  var html = '<div class="comment-item' + indent + '" id="comment-' + c.id + '">'
+    + '<div class="comment-header">'
+    + renderAuthor(c.author)
+    + '<span class="post-time">' + formatTime(c.created_at) + '</span>'
+    + '</div>'
+    + '<div class="comment-body">' + escapeHtml(c.content) + '</div>'
+    + '<div class="comment-actions">'
+    + renderVoteButtons('comment', c.id, c.vote_score || 0)
+    + '<button class="btn-reply" data-comment-id="' + c.id + '" data-author="' + escapeHtml(c.author ? (c.author.name || c.author.username) : '?') + '">回复</button>'
+    + '</div></div>';
+
+  if (c.replies && c.replies.length) {
+    c.replies.forEach(function(r) {
+      html += renderComment(r, true);
+    });
+  }
+  return html;
+}
+
+function bindReplyEvents(container) {
+  container.querySelectorAll('.btn-reply').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      replyTo = { id: parseInt(btn.dataset.commentId), name: btn.dataset.author };
+      document.getElementById('replyHint').style.display = '';
+      document.getElementById('replyToName').textContent = replyTo.name;
+      document.getElementById('commentInput').focus();
+    });
+  });
+}
+
+function cancelReply() {
+  replyTo = null;
+  document.getElementById('replyHint').style.display = 'none';
+}
+
+document.getElementById('btnSubmitComment').addEventListener('click', function() {
+  var content = document.getElementById('commentInput').value.trim();
+  if (!content) return;
+
+  var btn = document.getElementById('btnSubmitComment');
+  btn.disabled = true; btn.textContent = '提交中...';
+
+  api.addComment(postId, content, replyTo ? replyTo.id : null).then(function() {
+    document.getElementById('commentInput').value = '';
+    cancelReply();
+    btn.disabled = false; btn.textContent = '发表评论';
+    loadComments();
+  }).catch(function() {
+    btn.disabled = false; btn.textContent = '发表评论';
+  });
+});
+
+// 支持回车提交
+document.getElementById('commentInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    document.getElementById('btnSubmitComment').click();
+  }
+});
+
+initStore(function() {
+  loadPost();
+  loadComments();
+});
+</script>
+</body>
+</html>
