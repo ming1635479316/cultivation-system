@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from config import ALLOW_ORIGINS, WEB_DIR
 from database import init_db
 from routers import auth, state, tasks, messages, journals, quiz
+from routers import posts, comments, votes, users_public, direct_messages, leaderboard
 from middleware import _get_client_ip, check_api_rate_limit
 from logger import logger, log_request
 
@@ -92,6 +93,12 @@ app.include_router(tasks.router)
 app.include_router(messages.router)
 app.include_router(journals.router)
 app.include_router(quiz.router)
+app.include_router(posts.router)
+app.include_router(comments.router)
+app.include_router(votes.router)
+app.include_router(users_public.router)
+app.include_router(direct_messages.router)
+app.include_router(leaderboard.router)
 
 
 @app.get("/api/health")

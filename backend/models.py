@@ -91,6 +91,36 @@ class QuizResultOut(BaseModel):
     new_level: int | None = None
 
 
+# ---- 社交功能请求模型 ----
+
+class PostIn(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    content: str = Field(min_length=1, max_length=10000)
+    type: str = "article"  # "question" or "article"
+    tags: list[str] = []
+
+
+class PostUpdateIn(BaseModel):
+    title: str | None = None
+    content: str | None = None
+    tags: list[str] | None = None
+
+
+class CommentIn(BaseModel):
+    content: str = Field(min_length=1, max_length=2000)
+    parent_id: int | None = None
+
+
+class VoteIn(BaseModel):
+    target_type: str  # "post" or "comment"
+    target_id: int
+    value: int  # 1 or -1
+
+
+class DMIn(BaseModel):
+    content: str = Field(min_length=1, max_length=2000)
+
+
 # ---- 辅助函数 ----
 
 def now_iso() -> str:

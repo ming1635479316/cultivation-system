@@ -13,7 +13,8 @@ MAX_MESSAGES = 200
 
 # 允许前端写入的 event 类型（白名单）
 VALID_EVENT_TYPES = {
-    "task_done", "quiz_pass", "resource_read", "tool_unlock", "config_file", "journal_write"
+    "task_done", "quiz_pass", "resource_read", "tool_unlock", "config_file", "journal_write",
+    "post_create", "comment_create"
 }
 
 # 每个段位的任务数量（与前端 data.js 保持一致）
@@ -30,6 +31,8 @@ EVENT_CONFIG = {
     "tool_unlock":   {"tools": 8},
     "config_file":   {"tools": 5},
     "journal_write": {"coding": 3, "theory": 5},
+    "post_create":   {"theory": 2},
+    "comment_create": {"theory": 1},
 }
 
 # CORS 来源

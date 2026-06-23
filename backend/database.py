@@ -132,6 +132,58 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_events_user_id ON events(user_id);
             CREATE INDEX IF NOT EXISTS idx_messages_user_id ON messages(user_id);
             CREATE INDEX IF NOT EXISTS idx_journals_user_id ON journals(user_id);
+
+            CREATE TABLE IF NOT EXISTS posts (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id     INTEGER NOT NULL REFERENCES users(id),
+                title       TEXT    NOT NULL,
+                content     TEXT    NOT NULL,
+                type        TEXT    NOT NULL DEFAULT 'article',
+                tags        TEXT    DEFAULT '[]',
+                vote_score  INTEGER DEFAULT 0,
+                comment_count INTEGER DEFAULT 0,
+                created_at  TEXT    DEFAULT (datetime('now')),
+                updated_at  TEXT    DEFAULT (datetime('now'))
+            );
+
+            CREATE TABLE IF NOT EXISTS comments (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id     INTEGER NOT NULL REFERENCES users(id),
+                post_id     INTEGER NOT NULL REFERENCES posts(id),
+                parent_id   INTEGER DEFAULT NULL,
+                content     TEXT    NOT NULL,
+                vote_score  INTEGER DEFAULT 0,
+                created_at  TEXT    DEFAULT (datetime('now'))
+            );
+
+            CREATE TABLE IF NOT EXISTS votes (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id     INTEGER NOT NULL REFERENCES users(id),
+                target_type TEXT    NOT NULL,
+                target_id   INTEGER NOT NULL,
+                value       INTEGER NOT NULL,
+                created_at  TEXT    DEFAULT (datetime('now')),
+                UNIQUE(user_id, target_type, target_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS direct_messages (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                from_user_id INTEGER NOT NULL REFERENCES users(id),
+                to_user_id   INTEGER NOT NULL REFERENCES users(id),
+                content     TEXT    NOT NULL,
+                is_read     INTEGER DEFAULT 0,
+                created_at  TEXT    DEFAULT (datetime('now'))
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id);
+            CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at);
+            CREATE INDEX IF NOT EXISTS idx_posts_type ON posts(type);
+            CREATE INDEX IF NOT EXISTS idx_comments_post_id ON comments(post_id);
+            CREATE INDEX IF NOT EXISTS idx_comments_parent_id ON comments(parent_id);
+            CREATE INDEX IF NOT EXISTS idx_comments_user_id ON comments(user_id);
+            CREATE INDEX IF NOT EXISTS idx_votes_target ON votes(target_type, target_id);
+            CREATE INDEX IF NOT EXISTS idx_dm_from_to ON direct_messages(from_user_id, to_user_id);
+            CREATE INDEX IF NOT EXISTS idx_dm_to_read ON direct_messages(to_user_id, is_read);
         """)
 
         # 给旧 events 表添加 ref 字段
