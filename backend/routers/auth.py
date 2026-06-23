@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from models import RegisterIn, LoginIn, AuthOut, user_row_to_dict
 from database import get_db, cleanup_expired_tokens
-from middleware import hash_password, verify_password, check_login_rate_limit, _get_client_ip
+from middleware import hash_password, verify_password, check_login_rate_limit, _get_client_ip, get_user_id
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
