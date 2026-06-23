@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>我的修炼 · 编程修炼体系</title>
+  <title>我的修炼 · 计算机修行录</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-  <!-- 导航栏 -->
   <nav class="navbar">
     <div class="logo"><span class="logo-dot"></span>修炼录</div>
     <div class="nav-links">
@@ -21,7 +20,6 @@
 
   <div class="container">
 
-    <!-- 个人资料卡 -->
     <div class="profile-header">
       <div class="profile-avatar profile-avatar-clickable" id="profileAvatar" onclick="document.getElementById('avatarFileInput').click()" title="点击更换头像">易</div>
       <input type="file" id="avatarFileInput" accept="image/*" style="display:none">
@@ -34,7 +32,6 @@
       <button class="profile-edit-btn" id="btnEditProfile">✎ 编辑</button>
     </div>
 
-    <!-- 编辑资料卡片 -->
     <div class="profile-edit-card" id="profileEditCard" style="display:none;">
       <h3>编辑资料</h3>
       <div class="edit-row">
@@ -68,23 +65,19 @@
       </div>
     </div>
 
-    <!-- 战力属性 -->
     <div class="stats-section">
       <h3>修炼战力</h3>
       <div id="statsList"></div>
     </div>
 
-    <!-- 专精方向 -->
     <div class="stats-section">
       <h3>专精方向</h3>
       <div class="badge-grid" id="specList"></div>
     </div>
 
-    <!-- 感悟 -->
     <h3>感悟</h3>
     <p class="page-sub">记录每一次成长</p>
 
-    <!-- 感悟编辑器 -->
     <div class="journal-editor" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;margin-bottom:18px;box-shadow:var(--shadow);">
       <input type="text" id="journalTitle" placeholder="感悟标题，例如：我终于理解了递归" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:4px;font-size:14px;font-family:inherit;background:var(--bg);color:var(--text);margin-bottom:8px;">
       <textarea id="journalBody" rows="4" placeholder="写写这次突破经历了什么、踩了什么坑、学到了什么……" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:4px;font-size:14px;font-family:inherit;background:var(--bg);color:var(--text);resize:vertical;margin-bottom:8px;"></textarea>
@@ -93,15 +86,22 @@
     </div>
 
     <div id="journalList"></div>
-
   </div>
 
-  <div class="footer">
-    计算机修行录 · 记录每一次突破
-  </div>
+  <div class="footer">计算机修行录 · 记录每一次突破</div>
 
-  <script src="js/data.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/constants.js"></script>
+  <script src="js/store.js"></script>
   <script>
+    // 初始化：从服务端拉数据后渲染
+    initStore(function() {
+      refreshProfileDisplay();
+      renderStats();
+      renderSpecs();
+      refreshJournals();
+    });
+
     // ===== 用户信息 =====
     function refreshProfileDisplay() {
       var avatarEl = document.getElementById('profileAvatar');
@@ -124,7 +124,6 @@
       document.getElementById('userTitle').textContent = USER.level === 0 ? '入门 · 还没有段位' : USER.title + ' · 第 ' + USER.level + ' 段';
       document.getElementById('userLevel').textContent = '当前：' + LEVELS[USER.level].name;
     }
-    refreshProfileDisplay();
 
     // ===== 编辑资料 =====
     document.getElementById('btnEditProfile').addEventListener('click', function() {
@@ -142,9 +141,8 @@
       USER.gender = document.getElementById('editGender').value;
       USER.age = document.getElementById('editAge').value;
       USER.contact = document.getElementById('editContact').value.trim();
-
+      cacheSave();
       refreshProfileDisplay();
-      persistAll();
 
       document.getElementById('profileEditCard').style.display = 'none';
       document.getElementById('btnEditProfile').style.display = '';
@@ -170,133 +168,101 @@
           canvas.width = outSize;
           canvas.height = outSize;
           var ctx = canvas.getContext('2d');
-          // 取原图最大正方形区域（居中），缩放到 256×256
           var crop = Math.min(img.width, img.height);
           var sx = (img.width - crop) / 2;
           var sy = (img.height - crop) / 2;
           ctx.drawImage(img, sx, sy, crop, crop, 0, 0, outSize, outSize);
-
-          USER.avatar = canvas.toDataURL('image/jpeg', 0.6);  // 压缩以减少 localStorage 占用
+          USER.avatar = canvas.toDataURL('image/jpeg', 0.6);
           refreshProfileDisplay();
-          persistAll();
+          cacheSave();
         };
         img.src = e.target.result;
       };
       reader.readAsDataURL(file);
-      this.value = '';  // 允许重复选同一文件
+      this.value = '';
     });
 
-    // ===== 渲染属性 =====
-    const statNames = {
-      coding: '编程能力',
-      project: '项目经验',
-      theory: '理论知识',
-      tools: '工具掌握'
-    };
-    const statClasses = {
-      coding: 'fill-coding',
-      project: 'fill-project',
-      theory: 'fill-theory',
-      tools: 'fill-tool'
-    };
-    const statsEl = document.getElementById('statsList');
-    Object.entries(USER.stats).forEach(([key, val]) => {
-      statsEl.innerHTML += `
-        <div class="stat-item">
-          <div class="stat-label">
-            <span>${statNames[key]}</span>
-            <span>${val}/100</span>
-          </div>
-          <div class="stat-bar">
-            <div class="stat-fill ${statClasses[key]}" style="width:${val}%"></div>
-          </div>
-        </div>
-      `;
-    });
-
-    // ===== 渲染专精方向 =====
-    const specEl = document.getElementById('specList');
-    if (USER.specializations.length === 0) {
-      specEl.innerHTML = '<p style="color:var(--text-dim);font-size:14px;">突破到更高段位后解锁专精方向。</p>';
-    } else {
-      USER.specializations.forEach(spec => {
-        specEl.innerHTML += `
-          <div class="badge-item ${spec.unlocked ? 'unlocked' : 'locked'}">
-            <div class="badge-icon">${spec.icon}</div>
-            <div class="badge-name">${spec.name}</div>
-          </div>
-        `;
-      });
-    }
-
-    // ===== 写感悟 =====
-    document.getElementById('btnSaveJournal').addEventListener('click', function() {
-      var title = document.getElementById('journalTitle').value.trim();
-      var body = document.getElementById('journalBody').value.trim();
-      if (!title || !body) return;
-
-      USER.journals.unshift({
-        title: title,
-        body: body,
-        date: new Date().toISOString().slice(0, 10)
-      });
-
-      recordEvent('journal_write', { desc: title });
-
-      document.getElementById('journalTitle').value = '';
-      document.getElementById('journalBody').value = '';
-
-      var msg = document.getElementById('journalMsg');
-      msg.style.display = 'inline';
-      setTimeout(function() { msg.style.display = 'none'; }, 2000);
-
-      refreshStats();
-      refreshJournals();
-    });
-
-    function refreshStats() {
+    // ===== 属性 =====
+    function renderStats() {
       var el = document.getElementById('statsList');
       if (!el) return;
-      el.innerHTML = '';
+      var stats = USER.stats || {};
       var sn = { coding: '编程能力', project: '项目经验', theory: '理论知识', tools: '工具掌握' };
       var sc = { coding: 'fill-coding', project: 'fill-project', theory: 'fill-theory', tools: 'fill-tool' };
-      Object.keys(USER.stats).forEach(function(key) {
-        var val = USER.stats[key];
+      el.innerHTML = '';
+      Object.keys(stats).forEach(function(key) {
+        var val = stats[key] || 0;
         el.innerHTML += '<div class="stat-item">' +
-          '<div class="stat-label"><span>' + sn[key] + '</span><span>' + val + '/100</span></div>' +
-          '<div class="stat-bar"><div class="stat-fill ' + sc[key] + '" style="width:' + val + '%"></div></div>' +
+          '<div class="stat-label"><span>' + (sn[key] || key) + '</span><span>' + val + '/100</span></div>' +
+          '<div class="stat-bar"><div class="stat-fill ' + (sc[key] || '') + '" style="width:' + val + '%"></div></div>' +
           '</div>';
       });
     }
 
-    function deleteJournal(index) {
-      USER.journals.splice(index, 1);
-      persistAll();
-      refreshJournals();
-    }
-
-    function refreshJournals() {
-      var el = document.getElementById('journalList');
-      if (USER.journals.length === 0) {
-        el.innerHTML = '<p style="color:var(--text-dim);font-size:14px;">还没有感悟，去写第一篇吧。</p>';
+    // ===== 专精方向 =====
+    function renderSpecs() {
+      var el = document.getElementById('specList');
+      if (USER.specializations.length === 0) {
+        el.innerHTML = '<p style="color:var(--text-dim);font-size:14px;">突破到更高段位后解锁专精方向。</p>';
       } else {
-        el.innerHTML = USER.journals.map(function(e, i) {
-          return '<div class="journal-entry">' +
-            '<div class="entry-header">' +
-            '<div class="entry-title">' + e.title + '</div>' +
-            '<div style="display:flex;align-items:center;gap:8px;">' +
-            '<div class="entry-date">' + e.date + '</div>' +
-            '<button class="journal-del-btn" onclick="deleteJournal(' + i + ')" title="删除此感悟">✕</button>' +
-            '</div>' +
-            '</div>' +
-            '<div class="entry-body">' + e.body + '</div>' +
+        el.innerHTML = USER.specializations.map(function(spec) {
+          return '<div class="badge-item ' + (spec.unlocked ? 'unlocked' : 'locked') + '">' +
+            '<div class="badge-icon">' + spec.icon + '</div>' +
+            '<div class="badge-name">' + spec.name + '</div>' +
             '</div>';
         }).join('');
       }
     }
 
-    // 初始渲染
-    refreshJournals();
+    // ===== 感悟 =====
+    document.getElementById('btnSaveJournal').addEventListener('click', function() {
+      var title = document.getElementById('journalTitle').value.trim();
+      var body = document.getElementById('journalBody').value.trim();
+      if (!title || !body) return;
+
+      api.addJournal({ title: title, body: body }).then(function(data) {
+        if (data && data.id) {
+          document.getElementById('journalTitle').value = '';
+          document.getElementById('journalBody').value = '';
+          var msg = document.getElementById('journalMsg');
+          msg.style.display = 'inline';
+          setTimeout(function() { msg.style.display = 'none'; }, 2000);
+          // 重新拉取感悟列表
+          refreshJournals();
+        }
+      });
+    });
+
+    function deleteJournal(id) {
+      api.deleteJournal(id).then(function() {
+        refreshJournals();
+      });
+    }
+
+    function refreshJournals() {
+      var el = document.getElementById('journalList');
+      api.getJournals().then(function(journals) {
+        USER.journals = journals || [];
+        if (!journals || journals.length === 0) {
+          el.innerHTML = '<p style="color:var(--text-dim);font-size:14px;">还没有感悟，去写第一篇吧。</p>';
+        } else {
+          el.innerHTML = journals.map(function(e) {
+            return '<div class="journal-entry">' +
+              '<div class="entry-header">' +
+              '<div class="entry-title">' + e.title + '</div>' +
+              '<div style="display:flex;align-items:center;gap:8px;">' +
+              '<div class="entry-date">' + (e.date || '') + '</div>' +
+              '<button class="journal-del-btn" onclick="deleteJournal(' + e.id + ')" title="删除此感悟">✕</button>' +
+              '</div>' +
+              '</div>' +
+              '<div class="entry-body">' + e.body + '</div>' +
+              '</div>';
+          }).join('');
+        }
+      }).catch(function() {
+        el.innerHTML = '<p style="color:var(--text-dim);font-size:14px;">加载失败，请检查网络。</p>';
+      });
+    }
   </script>
 </body>
 </html>

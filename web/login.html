@@ -55,7 +55,6 @@
     <h1 id="formTitle">登录</h1>
     <div class="sub">计算机修行录</div>
 
-    <!-- 登录表单 -->
     <form id="loginForm" onsubmit="handleLogin(event)">
       <div class="field">
         <label>用户名</label>
@@ -68,7 +67,6 @@
       <button class="btn" type="submit">登 录</button>
     </form>
 
-    <!-- 注册表单 -->
     <form id="registerForm" style="display:none" onsubmit="handleRegister(event)">
       <div class="field">
         <label>用户名</label>
@@ -88,14 +86,8 @@
     </div>
   </div>
 
+  <script src="js/api.js"></script>
   <script>
-    var API_BASE = (function() {
-      var o = window.location.origin;
-      if (o.indexOf('file:') === 0 || o.indexOf('127.0.0.1') >= 0 || o.indexOf('localhost') >= 0)
-        return 'http://127.0.0.1:8001';
-      return o;
-    })();
-
     var isRegister = false;
 
     function toggleForm() {
@@ -121,12 +113,13 @@
       var token = localStorage.getItem('cultivation_token');
       if (!token) return;
 
-      // 显示正在自动登录的提示
       document.getElementById('loginForm').style.display = 'none';
       document.getElementById('registerForm').style.display = 'none';
-      document.getElementById('toggleText').style.display = 'none';
-      document.getElementById('toggleLink').style.display = 'none';
       document.getElementById('formTitle').textContent = '正在进入';
+      var toggleText = document.getElementById('toggleText');
+      var toggleLink = document.getElementById('toggleLink');
+      if (toggleText) toggleText.style.display = 'none';
+      if (toggleLink) toggleLink.style.display = 'none';
       showError('检测到已登录账号，正在进入...');
 
       try {
@@ -137,14 +130,13 @@
           window.location.href = 'index.html';
           return;
         }
-        // token 已过期或无效，清空后回到登录页
       } catch(e) {}
 
       localStorage.removeItem('cultivation_token');
       localStorage.removeItem('cultivation_user');
       document.getElementById('loginForm').style.display = '';
-      document.getElementById('toggleText').style.display = '';
-      document.getElementById('toggleLink').style.display = '';
+      if (toggleText) toggleText.style.display = '';
+      if (toggleLink) toggleLink.style.display = '';
       document.getElementById('formTitle').textContent = '登录';
       showError('登录已过期，请重新登录');
     }
@@ -157,19 +149,13 @@
       if (!u || !p) { showError('请填写用户名和密码'); return; }
 
       try {
-        var res = await fetch(API_BASE + '/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: u, password: p })
-        });
-        if (!res.ok) {
-          var err = await res.json();
-          showError(err.detail || '登录失败');
-          return;
+        var data = await api.login(u, p);
+        if (data.token) {
+          saveAuth(data.token, data.user);
+          window.location.href = 'index.html';
+        } else {
+          showError(data.detail || '登录失败');
         }
-        var data = await res.json();
-        saveAuth(data.token, data.user);
-        window.location.href = 'index.html';
       } catch(e) { showError('网络错误，请检查后端是否启动'); }
     }
 
@@ -182,23 +168,16 @@
       if (p.length < 4) { showError('密码至少4位'); return; }
 
       try {
-        var res = await fetch(API_BASE + '/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: u, password: p })
-        });
-        if (!res.ok) {
-          var err = await res.json();
-          showError(err.detail || '注册失败');
-          return;
+        var data = await api.register(u, p);
+        if (data.token) {
+          saveAuth(data.token, data.user);
+          window.location.href = 'index.html';
+        } else {
+          showError(data.detail || '注册失败');
         }
-        var data = await res.json();
-        saveAuth(data.token, data.user);
-        window.location.href = 'index.html';
       } catch(e) { showError('网络错误，请检查后端是否启动'); }
     }
 
-    // 页面加载时尝试自动登录
     tryAutoLogin();
   </script>
 </body>

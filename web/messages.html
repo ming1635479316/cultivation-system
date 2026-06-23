@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>消息 · 编程修炼体系</title>
+  <title>消息 · 计算机修行录</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-  <!-- 导航栏 -->
   <nav class="navbar">
     <div class="logo"><span class="logo-dot"></span>修炼录</div>
     <div class="nav-links">
@@ -22,17 +21,13 @@
   <div class="container">
     <h2 class="page-title">消息</h2>
     <p class="page-sub">修炼路上的动态与通知
-      <button id="btnMarkAllRead" style="margin-left:12px;padding:4px 14px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text-dim);font-size:12px;cursor:pointer;font-family:inherit;" onclick="markAllRead();renderMessages();">全部已读</button>
+      <button id="btnMarkAllRead" style="margin-left:12px;padding:4px 14px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text-dim);font-size:12px;cursor:pointer;font-family:inherit;">全部已读</button>
     </p>
 
-    <div id="msgList">
-      <!-- 由 JS 动态渲染 -->
-    </div>
+    <div id="msgList"></div>
   </div>
 
-  <div class="footer">
-    计算机修行录 · 记录每一次突破
-  </div>
+  <div class="footer">计算机修行录 · 记录每一次突破</div>
 
   <!-- 底部操作面板 -->
   <div class="action-sheet-overlay" id="actionSheetOverlay" onclick="closeActionSheet()">
@@ -45,7 +40,8 @@
     </div>
   </div>
 
-  <script src="js/data.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/store.js"></script>
   <script>
     var _actionMsgId = null;
 
@@ -65,11 +61,12 @@
       });
 
       el.innerHTML = sorted.map(function(msg) {
-        return '<div class="msg-item' + (msg.unread ? ' unread' : '') + (msg.pinned ? ' msg-pinned' : '') + '" onclick="openActionSheet(' + msg.id + ')">' +
+        return '<div class="msg-item' + (msg.unread ? ' unread' : '') + (msg.pinned ? ' msg-pinned' : '') +
+          '" onclick="openActionSheet(' + msg.id + ')">' +
           (msg.icon ? '<div class="msg-icon">' + msg.icon + '</div>' : '') +
           '<div class="msg-body">' +
           '<div class="msg-text">' + msg.text + '</div>' +
-          '<div class="msg-time">' + msg.time + '</div>' +
+          '<div class="msg-time">' + (msg.time || '') + '</div>' +
           '</div>' +
           '<span class="msg-more">⋯</span>' +
           '</div>';
@@ -90,19 +87,50 @@
       _actionMsgId = null;
     }
 
+    // 置顶/取消置顶
     document.getElementById('actionSheetPin').addEventListener('click', function() {
-      if (_actionMsgId !== null) togglePinMessage(_actionMsgId);
-      closeActionSheet();
-      renderMessages();
+      if (_actionMsgId === null) return;
+      var msg = MESSAGES.find(function(m) { return m.id === _actionMsgId; });
+      if (!msg) return;
+      api.updateMessage(_actionMsgId, {
+        icon: msg.icon || '',
+        text: msg.text,
+        time: msg.time,
+        unread: msg.unread,
+        pinned: !msg.pinned
+      }).then(function() {
+        // 更新本地
+        msg.pinned = !msg.pinned;
+        cacheSave();
+        closeActionSheet();
+        renderMessages();
+      });
     });
 
+    // 删除消息
     document.getElementById('actionSheetDelete').addEventListener('click', function() {
-      if (_actionMsgId !== null) deleteMessage(_actionMsgId);
-      closeActionSheet();
-      renderMessages();
+      if (_actionMsgId === null) return;
+      api.deleteMessage(_actionMsgId).then(function() {
+        MESSAGES = MESSAGES.filter(function(m) { return m.id !== _actionMsgId; });
+        cacheSave();
+        closeActionSheet();
+        renderMessages();
+      });
     });
 
-    renderMessages();
+    // 全部已读
+    document.getElementById('btnMarkAllRead').addEventListener('click', function() {
+      api.markAllRead().then(function() {
+        MESSAGES.forEach(function(m) { m.unread = false; });
+        cacheSave();
+        renderMessages();
+      });
+    });
+
+    // 初始化
+    initStore(function() {
+      renderMessages();
+    });
   </script>
 </body>
 </html>
