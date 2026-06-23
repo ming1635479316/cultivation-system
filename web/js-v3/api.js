@@ -131,6 +131,15 @@ var api = {
       .then(function(r) { return r.json(); });
   },
 
+  // ---- 个人资料 ----
+  updateProfile: function(data) {
+    return apiFetch(API_BASE + '/api/user/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    }).then(function(r) { return r.json(); });
+  },
+
   addJournal: function(journal) {
     return apiFetch(API_BASE + '/api/journals', {
       method: 'POST',
