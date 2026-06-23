@@ -36,6 +36,7 @@ def list_posts(
     get_user_id(request)
     offset = (page - 1) * limit
 
+    extra_where = ""
     if sort == "hot":
         order = "(p.vote_score * 2 + p.comment_count) DESC, p.created_at DESC"
     elif sort == "questions":
@@ -46,7 +47,6 @@ def list_posts(
         extra_where = " AND p.type='article'"
     else:  # newest
         order = "p.created_at DESC"
-        extra_where = ""
 
     sql = (
         "SELECT p.* FROM posts p WHERE 1=1"
