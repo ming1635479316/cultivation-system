@@ -51,10 +51,28 @@
     .error { color: var(--seal); font-size: 13px; text-align: center; margin-top: 8px; min-height: 20px; }
     .toggle { text-align: center; margin-top: 16px; font-size: 13px; color: var(--text-dim); }
     .toggle a { color: var(--seal); cursor: pointer; }
+    /* 微信引导提示条 */
+    .wechat-tip {
+      display: none; background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px;
+      padding: 14px 16px; margin-bottom: 20px; text-align: center; font-size: 14px;
+      color: #92400e; line-height: 1.8;
+    }
+    .wechat-tip .arrow { font-size: 18px; }
+    .wechat-tip strong { color: #d97706; }
+    @media (prefers-color-scheme: dark) {
+      .wechat-tip { background: #292524; border-color: #d97706; color: #fcd34d; }
+      .wechat-tip strong { color: #fbbf24; }
+    }
   </style>
 </head>
 <body>
   <div class="card">
+    <!-- 微信浏览器检测提示 -->
+    <div class="wechat-tip" id="wechatTip">
+      <span class="arrow">⬆</span> 点击右上角 <strong>···</strong><br>
+      选择 <strong>在浏览器中打开</strong><br>
+      <span style="font-size:12px;color:#a8a29e;">微信内置浏览器兼容性差，建议用系统浏览器获得完整体验</span>
+    </div>
     <h1 id="formTitle">登录</h1>
     <div class="sub">计算机修行录</div>
 
@@ -90,6 +108,12 @@
   </div>
 
   <script src="js-v3/api.js"></script>
+  <script>
+    // 微信浏览器检测：显示引导提示
+    if (/MicroMessenger/i.test(navigator.userAgent)) {
+      document.getElementById('wechatTip').style.display = 'block';
+    }
+  </script>
   <script>
     var isRegister = false;
 

@@ -1066,3 +1066,28 @@ a:hover { opacity: 0.8; }
   .page-title { font-size: 20px; }
   .level-card { padding: 16px 18px; }
 }
+
+/* ===== 微信浏览器引导提示 ===== */
+.wechat-tip {
+  display: none;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  text-align: center;
+  font-size: 14px;
+  color: #92400e;
+  line-height: 1.8;
+  animation: wechatPulse 2s infinite;
+}
+.wechat-tip .arrow { font-size: 18px; }
+.wechat-tip strong { color: #d97706; font-size: 15px; }
+@keyframes wechatPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.3); }
+  50%      { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+}
+@media (prefers-color-scheme: dark) {
+  .wechat-tip { background: #292524; border-color: #d97706; color: #fcd34d; }
+  .wechat-tip strong { color: #fbbf24; }
+}
