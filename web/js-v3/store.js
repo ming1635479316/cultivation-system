@@ -177,8 +177,7 @@ function initStore(callback) {
       syncFromServer(data);
       STORE_READY = true;
       STORE_ERROR = null;
-      showSyncBar('✓ 同步完成', 'done');
-      hideSyncBar(1200);
+      hideSyncBar(0);  // 同步成功静默，不打扰用户
     } else {
       cacheLoad();
       STORE_READY = true;
