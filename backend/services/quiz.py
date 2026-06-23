@@ -107,6 +107,11 @@ QUESTION_BANK: list[dict] = [
 ]
 
 
+# 给每道题分配稳定 ID（在模块加载后执行）
+for _i, _q in enumerate(QUESTION_BANK):
+    _q["id"] = _i + 1  # 1-based
+
+
 def pick_questions(level_id: int, n: int) -> list[dict]:
     """Fisher-Yates 洗牌抽题，返回 n 道题（不带答案）。"""
     pool = [q for q in QUESTION_BANK if q["level"] == level_id]
@@ -220,11 +225,23 @@ def _shuffle(arr: list):
 
 
 def _strip_answer(q: dict) -> dict:
-    """返回不带答案的题目。"""
+    """返回不带答案的题目（含稳定 ID）。"""
     return {
-        "id": q.get("id", hash(q["q"]) % 100000),
+        "id": q["id"],
         "level": q["level"],
         "category": q["cat"],
         "question": q["q"],
         "options": q["opts"],
     }
+
+
+def get_questions_by_ids(level_id: int, question_ids: list[int]) -> list[dict]:
+    """根据题目 ID 精确获取题目（带答案），供判卷用。"""
+    id_map = {q["id"]: q for q in QUESTION_BANK if q["level"] == level_id}
+    result = []
+    for qid in question_ids:
+        q = id_map.get(qid)
+        if q is None:
+            raise ValueError(f"题目 {qid} 不存在或不属于段位 {level_id}")
+        result.append(q)
+    return result

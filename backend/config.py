@@ -13,8 +13,8 @@ MAX_MESSAGES = 200
 
 # 允许前端写入的 event 类型（白名单）
 VALID_EVENT_TYPES = {
-    "task_done", "quiz_pass", "resource_read", "tool_unlock", "config_file", "journal_write",
-    "post_create", "comment_create"
+    "task_done", "quiz_pass", "quiz_correct", "resource_read", "tool_unlock", "config_file",
+    "journal_write", "post_create", "comment_create"
 }
 
 # 每个段位的任务数量（与前端 data.js 保持一致）

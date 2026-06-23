@@ -300,14 +300,16 @@ function submitQuiz() {
   var ctx = window._currentQuiz;
   if (!picked || !ctx) return;
 
-  // 收集答案
+  // 收集答案 + 题号
   var answers = [];
+  var questionIds = [];
   picked.forEach(function(qq, qi) {
     var sel = document.querySelector('input[name="q' + qi + '"]:checked');
     answers.push(sel ? parseInt(sel.value) : -1);
+    questionIds.push(qq.id);
   });
 
-  api.submitQuiz(ctx.level.id, answers).then(function(data) {
+  api.submitQuiz(ctx.level.id, questionIds, answers).then(function(data) {
     if (!data) return;
 
     // 显示每题对错

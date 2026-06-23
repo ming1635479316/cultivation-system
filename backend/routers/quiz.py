@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Request
 from models import QuizSubmitIn, row_to_dict, now_iso
 from database import get_db
 from middleware import get_user_id
-from services.quiz import pick_questions, get_questions_with_answers, grade_answers
+from services.quiz import pick_questions, get_questions_by_ids, grade_answers
 from services.stats import calc_stats, calc_progress
 from services.events import record_event
 from config import LEVEL_TASKS
@@ -36,12 +36,10 @@ def submit_quiz(body: QuizSubmitIn, request: Request):
         if not user:
             raise HTTPException(404, "用户不存在")
 
-        # 重新抽取同样的题目（带答案）进行判卷
-        # 注意：这里用固定种子确保和前端展示的题目一致
-        # 方案：前端回传题目的 question 文本，后端匹配判卷
-        full_questions = get_questions_with_answers(body.level_id, len(body.answers))
-        if len(full_questions) != len(body.answers):
+        # 根据前端回传的题目 ID 精确获取题目进行判卷
+        if len(body.question_ids) != len(body.answers):
             raise HTTPException(400, "题目数量不匹配")
+        full_questions = get_questions_by_ids(body.level_id, body.question_ids)
 
         result = grade_answers(full_questions, body.answers, body.level_id)
 

@@ -42,7 +42,8 @@ class TaskAction(BaseModel):
 
 class QuizSubmitIn(BaseModel):
     level_id: int = Field(..., ge=0, le=9)
-    answers: list[int]  # 每题选中的选项索引
+    question_ids: list[int]  # 题目 ID（确保前后端同一套题）
+    answers: list[int]      # 每题选中的选项索引
 
 
 class ProfileUpdateIn(BaseModel):

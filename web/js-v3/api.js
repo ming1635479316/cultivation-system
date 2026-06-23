@@ -88,11 +88,11 @@ var api = {
       .then(function(r) { return r.json(); });
   },
 
-  submitQuiz: function(levelId, answers) {
+  submitQuiz: function(levelId, questionIds, answers) {
     return apiFetch(API_BASE + '/api/quiz/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ level_id: levelId, answers: answers })
+      body: JSON.stringify({ level_id: levelId, question_ids: questionIds, answers: answers })
     }).then(function(r) { return r.json(); });
   },
 
