@@ -23,7 +23,9 @@ function escapeHtml(str) {
 // 用户小头像+名字 HTML 片段
 function renderAuthor(user, showLevel) {
   if (!user) return '';
-  var avatar = (user.avatar || user.name || '?')[0];
+  var av = user.avatar || '';
+  if (av.length > 10 || av.startsWith('data:')) av = '';
+  var avatar = (av || user.name || '?')[0];
   var name = escapeHtml(user.name || user.username || '?');
   var levelBadge = '';
   if (showLevel !== false) {

@@ -53,7 +53,8 @@ function loadProfile() {
     var html = '';
     // 头像区
     html += '<div class="profile-header">';
-    html += '<div class="profile-avatar" style="background:var(--seal-light);color:var(--seal);">' + escapeHtml((u.avatar || u.name || '?')[0]) + '</div>';
+    var av = u.avatar || ''; if (av.length > 10 || av.startsWith('data:')) av = '';
+    html += '<div class="profile-avatar" style="background:var(--seal-light);color:var(--seal);">' + escapeHtml((av || u.name || '?')[0]) + '</div>';
     html += '<div class="profile-info">';
     html += '<h2>' + escapeHtml(u.name || u.username) + '</h2>';
     html += '<p style="color:var(--text-dim);">' + escapeHtml(u.title || '修炼者') + ' · 第' + (u.level || 0) + '段</p>';

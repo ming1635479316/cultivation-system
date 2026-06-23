@@ -44,6 +44,13 @@
 var MEDALS = ['🥇', '🥈', '🥉'];
 var LEVEL_COLORS = ['#6b6558','#57534e','#78716c','#575e6e','#4e6e5e','#8b7500','#b85c12','#c0392b','#8b1a1a','#1c1917'];
 
+function avatarChar(entry) {
+  var av = entry.avatar || '';
+  // base64 图片不算头像，用名字首字
+  if (av.length > 10 || av.startsWith('data:')) av = '';
+  return (av || entry.name || entry.username || '?')[0];
+}
+
 function loadBoard() {
   api.getLeaderboard().then(function(data) {
     var board = data.leaderboard || [];
@@ -56,11 +63,11 @@ function loadBoard() {
     var top3 = board.slice(0, 3);
     var top3html = '';
     top3.forEach(function(entry, i) {
-      var order = [1, 0, 2]; // 银 金 铜 排列
+      var order = [0, 1, 2]; // 金 银 铜 排列
       var pos = order[i];
       top3html += '<div class="top-card top-' + (pos + 1) + '" onclick="location.href=\'user.html?id=' + entry.id + '\'">'
         + '<div class="top-medal">' + MEDALS[pos] + '</div>'
-        + '<div class="top-avatar" style="background:' + LEVEL_COLORS[Math.min(entry.level, 9)] + ';color:#fff;width:48px;height:48px;line-height:48px;border-radius:50%;text-align:center;font-size:20px;margin:0 auto;">' + escapeHtml((entry.avatar || entry.name || '?')[0]) + '</div>'
+        + '<div class="top-avatar" style="background:' + LEVEL_COLORS[Math.min(entry.level, 9)] + ';color:#fff;width:48px;height:48px;line-height:48px;border-radius:50%;text-align:center;font-size:20px;margin:0 auto;">' + escapeHtml(avatarChar(entry)) + '</div>'
         + '<div class="top-name">' + escapeHtml(entry.name || entry.username) + '</div>'
         + '<div class="top-level">' + escapeHtml(entry.title) + ' · Lv.' + entry.level + '</div>'
         + '<div class="top-stats">' + entry.totalStats + ' 战力</div>'
@@ -74,7 +81,7 @@ function loadBoard() {
       var medalHtml = entry.rank <= 3 ? ' <span style="font-size:18px;">' + MEDALS[entry.rank - 1] + '</span>' : '';
       listHtml += '<div class="lb-row" onclick="location.href=\'user.html?id=' + entry.id + '\'">'
         + '<span class="lb-rank">#' + entry.rank + medalHtml + '</span>'
-        + '<span class="lb-avatar" style="background:' + LEVEL_COLORS[Math.min(entry.level, 9)] + ';color:#fff;">' + escapeHtml((entry.avatar || entry.name || '?')[0]) + '</span>'
+        + '<span class="lb-avatar" style="background:' + LEVEL_COLORS[Math.min(entry.level, 9)] + ';color:#fff;">' + escapeHtml(avatarChar(entry)) + '</span>'
         + '<div class="lb-info">'
         + '<span class="lb-name">' + escapeHtml(entry.name || entry.username) + '</span>'
         + '<span class="lb-title">' + escapeHtml(entry.title) + '</span>'
