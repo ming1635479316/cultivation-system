@@ -69,8 +69,8 @@ function loadBoard() {
         + '<div class="top-medal">' + MEDALS[pos] + '</div>'
         + '<div class="top-avatar" style="background:' + LEVEL_COLORS[Math.min(entry.level, 9)] + ';color:#fff;width:48px;height:48px;line-height:48px;border-radius:50%;text-align:center;font-size:20px;margin:0 auto;">' + escapeHtml(avatarChar(entry)) + '</div>'
         + '<div class="top-name">' + escapeHtml(entry.name || entry.username) + '</div>'
-        + '<div class="top-level">' + escapeHtml(entry.title) + ' · Lv.' + entry.level + '</div>'
-        + '<div class="top-stats">' + entry.totalStats + ' 战力</div>'
+        + '<div class="top-level">' + escapeHtml(entry.title) + ' · ' + levelName(entry.level) + '</div>'
+        + '<div class="top-stats">' + formatPower(entry.totalStats) + ' 战力</div>'
         + '</div>';
     });
     document.getElementById('top3').innerHTML = top3html;
@@ -86,8 +86,8 @@ function loadBoard() {
         + '<span class="lb-name">' + escapeHtml(entry.name || entry.username) + '</span>'
         + '<span class="lb-title">' + escapeHtml(entry.title) + '</span>'
         + '</div>'
-        + '<span class="lb-level">Lv.' + entry.level + '</span>'
-        + '<span class="lb-stats">' + entry.totalStats + ' 战力</span>'
+        + '<span class="lb-level">' + levelName(entry.level) + '</span>'
+        + '<span class="lb-stats">' + formatPower(entry.totalStats) + ' 战力</span>'
         + '</div>';
     });
     document.getElementById('rankList').innerHTML = listHtml;

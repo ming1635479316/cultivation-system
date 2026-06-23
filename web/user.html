@@ -70,8 +70,7 @@ function loadProfile() {
     Object.keys(STAT_LABELS).forEach(function(k) {
       var v = stats[k] || 0;
       html += '<div class="stat-item"><div class="stat-label">' + STAT_LABELS[k] + '</div>'
-        + '<div class="stat-bar"><div class="stat-fill" style="width:' + v + '%;background:' + STAT_COLORS[k] + ';"></div></div>'
-        + '<span class="stat-val">' + v + '/100</span></div>';
+        + '<span class="stat-val" style="font-weight:600;font-size:16px;">' + formatPower(v) + '</span></div>';
     });
     html += '</div>';
 

@@ -31,7 +31,7 @@ function renderAuthor(user, showLevel) {
   if (showLevel !== false) {
     var title = user.title || '修炼者';
     var level = (user.level !== undefined) ? user.level : 0;
-    levelBadge = '<span class="author-level">' + title + ' · Lv.' + level + '</span>';
+    levelBadge = '<span class="author-level">' + title + ' · ' + levelName(level) + '</span>';
   }
   return '<span class="author-chip" onclick="event.stopPropagation();location.href=\'user.html?id=' + (user.id || user.user_id) + '\'">'
     + '<span class="author-avatar">' + escapeHtml(avatar) + '</span>'
@@ -83,4 +83,19 @@ function renderTags(tags) {
   return tags.map(function(t) {
     return '<span class="tag-pill">' + escapeHtml(t) + '</span>';
   }).join('');
+}
+
+// 段位中文名
+var LEVEL_NAMES = ['入门','初段','二段','三段','四段','五段','六段','七段','八段','九段'];
+function levelName(level) {
+  if (typeof LEVELS !== 'undefined' && LEVELS[level]) return LEVELS[level].name;
+  return LEVEL_NAMES[level] || (level + '段');
+}
+
+// 战力数字格式化
+function formatPower(n) {
+  if (n === undefined || n === null) return '0';
+  if (n >= 100000000) return (n / 100000000).toFixed(1).replace(/\.0$/, '') + '亿';
+  if (n >= 10000) return (n / 10000).toFixed(1).replace(/\.0$/, '') + '万';
+  return n.toLocaleString();
 }

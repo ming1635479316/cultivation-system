@@ -99,6 +99,7 @@
   <script src="js-v3/api.js"></script>
   <script src="js-v3/constants.js"></script>
   <script src="js-v3/store.js"></script>
+  <script src="js-v3/social.js"></script>
   <script>
     (function() {
       // 安全 DOM 获取，避免微信等浏览器 null 报错
@@ -208,7 +209,7 @@
         el.innerHTML = '';
         Object.keys(stats).forEach(function(key) {
           var val = stats[key] || 0;
-          el.innerHTML += '<div class="stat-item"><div class="stat-label"><span>' + (sn[key]||key) + '</span><span>' + val + '/100</span></div><div class="stat-bar"><div class="stat-fill ' + (sc[key]||'') + '" style="width:' + val + '%"></div></div></div>';
+          el.innerHTML += '<div class="stat-item"><div class="stat-label">' + (sn[key]||key) + '</div><span class="stat-val" style="font-weight:600;font-size:16px;">' + formatPower(val) + '</span></div>';
         });
       }
 

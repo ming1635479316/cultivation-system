@@ -1,21 +1,22 @@
 """
 计算机修行录 - 属性与进度计算
 """
-from config import EVENT_CONFIG, LEVEL_TASKS, get_base_stats
+from config import EVENT_CONFIG, LEVEL_TASKS, get_base_stats, get_power_scale
 
 
 def calc_stats(level: int, events: list[dict]) -> dict[str, int]:
-    """从段位 + 事件日志计算四维属性。"""
-    stats = get_base_stats(level)
+    """从段位 + 事件日志计算四维属性（已含倍率）。"""
+    stats = get_base_stats(level)  # 基础值已从硬编码表获得，无需再乘
+    scale = get_power_scale(level)
     for e in events:
         cfg = EVENT_CONFIG.get(e.get("type"))
         if not cfg:
             continue
         value = e.get("value") or {}
-        for stat, base in cfg.items():
-            stats[stat] = stats.get(stat, 0) + value.get(stat, base)
+        for stat, base_val in cfg.items():
+            stats[stat] = stats.get(stat, 0) + value.get(stat, base_val * scale)
     for k in stats:
-        stats[k] = max(0, min(100, round(stats[k])))
+        stats[k] = max(0, round(stats[k]))
     return stats
 
 

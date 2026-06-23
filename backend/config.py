@@ -48,6 +48,29 @@ else:
     ]
 
 
+# 段位基础战力表（四维：coding/project/theory/tools）
+_BASE_STATS_TABLE = {
+    0:  (2,   1,   2,   1),    # 入门    ~6
+    1:  (30,  20,  25,  20),   # 初段    ~95
+    2:  (120, 80,  100, 80),   # 二段    ~380
+    3:  (400, 300, 350, 300),  # 三段    ~1350
+    4:  (1200, 900, 1100, 900),# 四段    ~4100
+    5:  (3000, 2200, 2700, 2200), # 五段 ~10100
+    6:  (7000, 5500, 6500, 5500), # 六段 ~24500
+    7:  (15000, 12000, 14000, 12000), # 七段 ~53000
+    8:  (32000, 25000, 29000, 25000), # 八段 ~111000
+    9:  (80000, 65000, 75000, 65000), # 九段 ~285000
+}
+
+
+# 段位战力倍率（用于事件加成缩放）
+_POWER_SCALE_MAP = {0:1, 1:3, 2:12, 3:40, 4:120, 5:300, 6:700, 7:1500, 8:3200, 9:8000}
+
+
+def get_power_scale(level: int) -> int:
+    return _POWER_SCALE_MAP.get(min(level, 9), 1)
+
+
 def get_task_reward(level_id: int) -> dict[str, int]:
     """关卡任务奖励（与前端 getTaskReward 保持一致）。"""
     if level_id <= 1:
@@ -60,10 +83,7 @@ def get_task_reward(level_id: int) -> dict[str, int]:
 
 
 def get_base_stats(level: int) -> dict[str, int]:
-    """段位基础属性（与前端 getBaseStats 保持一致）。"""
-    return {
-        "coding": level * 8,
-        "project": level * 6,
-        "theory": level * 7,
-        "tools": level * 6,
-    }
+    """段位基础属性（硬编码表，已含倍率）。"""
+    lv = min(level, 9)
+    c, p, t, tl = _BASE_STATS_TABLE.get(lv, (0, 0, 0, 0))
+    return {"coding": c, "project": p, "theory": t, "tools": tl}
