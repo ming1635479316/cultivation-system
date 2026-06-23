@@ -88,7 +88,6 @@ function initModalRefs() {
 
 function openModal(idx) {
   if (!overlay) initModalRefs();
-  window._currentQuiz = null;
 
   var level = LEVELS[idx];
   modalBadge.textContent = level.id;
@@ -127,6 +126,8 @@ function openModal(idx) {
     btnQuiz.style.opacity = '';
   }
 
+  // 设置当前考核上下文（供 startQuiz/submitQuiz 使用）
+  window._currentQuiz = { idx: idx, level: level };
   overlay.classList.add('open');
 }
 
