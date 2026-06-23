@@ -31,6 +31,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# 禁用缓存（微信浏览器会激进缓存，导致数据不同步）
+@app.middleware("http")
+async def add_no_cache_headers(request, call_next):
+    response = await call_next(request)
+    # 静态文件和 API 都禁止缓存
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
 # 注册路由
 app.include_router(auth.router)
 app.include_router(state.router)

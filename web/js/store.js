@@ -12,6 +12,51 @@ if (!AUTH_TOKEN) {
   window.location.href = 'login.html';
 }
 
+// ---- 同步加载状态 ----
+var STORE_READY = false;
+var STORE_ERROR = null;
+
+// 注入加载提示样式（仅在页面有 body 时生效）
+(function injectLoadingStyle() {
+  if (typeof document === 'undefined') return;
+  var style = document.createElement('style');
+  style.textContent =
+    '.sync-loading {' +
+      'position:fixed;top:0;left:0;right:0;z-index:9999;' +
+      'padding:6px 12px;text-align:center;font-size:13px;' +
+      'background:var(--seal,#c0392b);color:#fff;' +
+      'display:flex;align-items:center;justify-content:center;gap:6px;' +
+    '}' +
+    '.sync-loading.done { background:#16a34a; }' +
+    '.sync-loading.error { background:#d97706; }' +
+    '.sync-loading .dot { display:inline-block;width:6px;height:6px;border-radius:50%;background:#fff;animation:syncPulse 1s infinite; }' +
+    '.sync-loading .dot:nth-child(2){animation-delay:0.2s}' +
+    '.sync-loading .dot:nth-child(3){animation-delay:0.4s}' +
+    '@keyframes syncPulse{0%,100%{opacity:0.3}50%{opacity:1}}';
+  document.head.appendChild(style);
+})();
+
+function showSyncBar(msg, type) {
+  var el = document.getElementById('syncBar');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'syncBar';
+    el.className = 'sync-loading';
+    document.body.insertBefore(el, document.body.firstChild);
+  }
+  el.className = 'sync-loading' + (type ? ' ' + type : '');
+  el.innerHTML = msg;
+}
+
+function hideSyncBar(delay) {
+  delay = delay || 1500;
+  var el = document.getElementById('syncBar');
+  if (!el) return;
+  setTimeout(function() {
+    if (el.parentNode) el.parentNode.removeChild(el);
+  }, delay);
+}
+
 // ---- 存储键（按用户隔离）----
 var STORAGE_KEY = 'cultivation_v3_' + (AUTH_USER ? AUTH_USER.id : '0');
 
@@ -122,17 +167,30 @@ function applyServerResult(res) {
 function initStore(callback) {
   cacheLoad();
 
+  // 如果缓存里有数据，先用缓存渲染（不阻塞 UI）
+  var hasCache = MESSAGES.length > 0 || USER.completedTasks.length > 0 || USER.level > 0;
+
+  showSyncBar('<span class="dot"></span><span class="dot"></span><span class="dot"></span> 同步中...');
+
   api.getState().then(function(data) {
     if (data && data.user) {
       syncFromServer(data);
+      STORE_READY = true;
+      STORE_ERROR = null;
+      showSyncBar('✓ 同步完成', 'done');
+      hideSyncBar(1200);
     } else {
-      // 服务端无数据，尝试用缓存
       cacheLoad();
+      STORE_READY = true;
+      hideSyncBar(0);
     }
     if (callback) callback();
-  }).catch(function() {
-    // 网络失败，用缓存兜底
+  }).catch(function(e) {
     cacheLoad();
+    STORE_READY = true;
+    STORE_ERROR = '网络连接失败，显示的是本地缓存数据';
+    showSyncBar('⚠ ' + STORE_ERROR, 'error');
+    hideSyncBar(4000);
     if (callback) callback();
   });
 }
