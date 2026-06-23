@@ -75,7 +75,8 @@ def create_post(body: PostIn, request: Request):
         record_event(conn, uid, "post_create", value={"theory": 2}, ref=f"post_{post_id}")
 
         row = conn.execute("SELECT * FROM posts WHERE id=?", (post_id,)).fetchone()
-    return {"post": _post_with_author(conn, row)}
+        result = _post_with_author(conn, row)
+    return {"post": result}
 
 
 @router.get("/{post_id}")
@@ -122,7 +123,8 @@ def update_post(post_id: int, body: PostUpdateIn, request: Request):
             conn.execute(f"UPDATE posts SET {set_clause} WHERE id=?", values)
 
         row = conn.execute("SELECT * FROM posts WHERE id=?", (post_id,)).fetchone()
-    return {"post": _post_with_author(conn, row)}
+        result = _post_with_author(conn, row)
+    return {"post": result}
 
 
 @router.delete("/{post_id}")
