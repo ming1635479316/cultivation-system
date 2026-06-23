@@ -170,8 +170,6 @@ function initStore(callback) {
   // 如果缓存里有数据，先用缓存渲染（不阻塞 UI）
   var hasCache = MESSAGES.length > 0 || USER.completedTasks.length > 0 || USER.level > 0;
 
-  showSyncBar('<span class="dot"></span><span class="dot"></span><span class="dot"></span> 同步中...');
-
   api.getState().then(function(data) {
     if (data && data.user) {
       syncFromServer(data);
