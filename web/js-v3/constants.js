@@ -13,7 +13,7 @@ var LEVELS = [
     tasks: [],
     exam: "通过入门考核即可",
     resources: [
-      { name: "计算机科普：编程是什么", url: "https://www.runoob.com/what-is-programming.html" },
+      { name: "计算机科普：编程是什么", url: "https://developer.mozilla.org/zh-CN/docs/Learn/Getting_started_with_the_web" },
       { name: "VS Code 下载与安装", url: "https://code.visualstudio.com/" },
       { name: "键盘指法练习", url: "https://dazi.kukuw.com/" }
     ],
