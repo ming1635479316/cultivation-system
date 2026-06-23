@@ -75,3 +75,15 @@ def logout(request: Request):
         with get_db() as conn:
             conn.execute("DELETE FROM tokens WHERE token=?", (token,))
     return {"ok": True}
+
+
+@router.delete("/account")
+def delete_account(request: Request):
+    """删除当前用户账号及其所有数据（级联删除）。"""
+    uid = get_user_id(request)
+    with get_db() as conn:
+        # 手动级联删除（SQLite 不支持 ALTER TABLE 添加 CASCADE）
+        for table in ["events", "messages", "journals", "tokens"]:
+            conn.execute(f"DELETE FROM {table} WHERE user_id=?", (uid,))
+        conn.execute("DELETE FROM users WHERE id=?", (uid,))
+    return {"ok": True, "deleted": uid}

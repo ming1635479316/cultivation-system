@@ -97,6 +97,25 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def json_dumps(obj: Any) -> str:
+    """序列化为 JSON 字符串，确保有效 JSON。"""
+    return json.dumps(obj, ensure_ascii=False)
+
+
+def json_loads(s: Any) -> Any:
+    """安全地从字符串/已有对象解析 JSON。"""
+    if s is None:
+        return None
+    if isinstance(s, (list, dict)):
+        return s
+    if isinstance(s, str):
+        try:
+            return json.loads(s)
+        except json.JSONDecodeError:
+            return s
+    return s
+
+
 def row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
     d = dict(row)
     for key in ("specializations", "completed_tasks", "value"):
@@ -104,6 +123,7 @@ def row_to_dict(row: sqlite3.Row) -> dict[str, Any]:
             try:
                 d[key] = json.loads(d[key])
             except json.JSONDecodeError:
+                # 损坏的 JSON 保持原值，上游可自行处理
                 pass
     for key in ("unread", "pinned"):
         if key in d:

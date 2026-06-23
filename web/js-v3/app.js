@@ -375,7 +375,7 @@ function recordResourceRead(levelId, resIdx) {
   api.addMessage({
     icon: '📖',
     text: '阅读了修炼资源：' + level.resources[resIdx].name,
-    time: new Date().toISOString().slice(0, 10),
+    time: new Date().toISOString(),
     unread: true
   }).catch(function() {});
 }

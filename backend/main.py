@@ -3,22 +3,27 @@
 FastAPI 应用组装、生命周期、中间件注册
 """
 import os
+import time
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from config import ALLOW_ORIGINS, WEB_DIR
 from database import init_db
 from routers import auth, state, tasks, messages, journals, quiz
+from middleware import _get_client_ip, check_api_rate_limit
+from logger import logger, log_request
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.info("应用启动", extra={"extra_data": {"version": "3.0.0"}})
     init_db()
     yield
+    logger.info("应用关闭", extra={"extra_data": {"version": "3.0.0"}})
 
 
 app = FastAPI(title="计算机修行录 API", version="3.0.0", lifespan=lifespan)
@@ -33,10 +38,47 @@ app.add_middleware(
 )
 
 
-# 禁用缓存（微信浏览器会激进缓存，导致数据不同步）
+# ============================================================
+# 中间件：日志 + 限流 + 禁用缓存
+# ============================================================
+
+# 不需要限流的路径
+_RATE_LIMIT_SKIP = {"/api/health", "/docs", "/openapi.json", "/favicon.ico"}
+
+
 @app.middleware("http")
-async def add_no_cache_headers(request, call_next):
-    response = await call_next(request)
+async def middleware(request: Request, call_next):
+    start = time.time()
+    path = request.url.path
+    client_ip = _get_client_ip(request)
+
+    # 限流（跳过静态文件和健康检查）
+    if path.startswith("/api/") and path not in _RATE_LIMIT_SKIP:
+        try:
+            check_api_rate_limit(client_ip)
+        except Exception as e:
+            return JSONResponse(
+                status_code=429,
+                content={"detail": str(e.detail) if hasattr(e, "detail") else "请求过于频繁"},
+            )
+
+    # 执行业务
+    try:
+        response = await call_next(request)
+    except Exception:
+        logger.exception("未捕获异常", extra={"extra_data": {"path": path, "ip": client_ip}})
+        raise
+
+    duration = (time.time() - start) * 1000
+    log_request(
+        method=request.method,
+        path=path,
+        status=response.status_code,
+        duration_ms=duration,
+        client_ip=client_ip,
+    )
+
+    # 禁用缓存（微信浏览器会激进缓存，导致数据不同步）
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"

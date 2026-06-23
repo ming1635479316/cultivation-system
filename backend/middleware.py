@@ -1,5 +1,5 @@
 """
-计算机修行录 - 鉴权中间件
+计算机修行录 - 鉴权中间件 + 速率限制
 """
 import hashlib
 import bcrypt
@@ -10,6 +10,11 @@ from database import get_db
 
 # 登录失败次数限制（内存级，单机够用）
 _LOGIN_ATTEMPTS: dict[str, list[datetime]] = {}
+
+# 通用 API 速率限制（按 IP：时间窗口 + 计数）
+_RATE_WINDOW: dict[str, list[datetime]] = {}
+_RATE_LIMIT = 120       # 每 IP 每分钟最多请求数
+_RATE_WINDOW_SEC = 60   # 滑动窗口秒数
 
 
 def _get_client_ip(request: Request) -> str:
@@ -29,6 +34,18 @@ def check_login_rate_limit(client_ip: str):
         raise HTTPException(429, "登录尝试过多，请 5 分钟后再试")
     attempts.append(now)
     _LOGIN_ATTEMPTS[client_ip] = attempts
+
+
+def check_api_rate_limit(client_ip: str):
+    """滑动窗口限流：每分钟每 IP 最多 _RATE_LIMIT 次请求。"""
+    now = datetime.now(timezone.utc)
+    window_start = now - timedelta(seconds=_RATE_WINDOW_SEC)
+    timestamps = _RATE_WINDOW.get(client_ip, [])
+    timestamps = [t for t in timestamps if t > window_start]
+    if len(timestamps) >= _RATE_LIMIT:
+        raise HTTPException(429, "请求过于频繁，请稍后再试")
+    timestamps.append(now)
+    _RATE_WINDOW[client_ip] = timestamps
 
 
 def hash_password(pw: str) -> str:

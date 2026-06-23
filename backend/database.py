@@ -11,8 +11,12 @@ from config import DB_PATH, MAX_EVENTS, MAX_MESSAGES
 
 @contextmanager
 def get_db():
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10)
     conn.row_factory = sqlite3.Row
+    # 启用 WAL 模式（允许读写并发）+ 外键约束
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA busy_timeout=5000")
     try:
         yield conn
         conn.commit()
@@ -156,14 +160,18 @@ def init_db():
                 d = dict(old)
                 existing = conn.execute("SELECT id FROM users WHERE id=1").fetchone()
                 if not existing:
+                    import os, secrets
+                    admin_pw = os.environ.get("ADMIN_PASSWORD") or secrets.token_urlsafe(10)
                     conn.execute(
                         """INSERT INTO users (id, username, password, name, avatar, title, level,
                            gender, age, contact, joined_date, specializations, completed_tasks)
                            VALUES (1, 'admin', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                        (_hash_password('admin'), d.get('name', '易'), d.get('avatar', '易'),
+                        (_hash_password(admin_pw), d.get('name', '易'), d.get('avatar', '易'),
                          d.get('title', '修炼者'), d.get('level', 0), d.get('gender', ''),
                          d.get('age', ''), d.get('contact', ''), d.get('joined_date', '2026-06-13'),
                          d.get('specializations', '[]'), d.get('completed_tasks', '[]')))
+                    import sys
+                    print(f"[init_db] admin 密码已迁移，新密码: {admin_pw}", file=sys.stderr)
             conn.execute("DROP TABLE IF EXISTS user_old")
             conn.execute("DROP TABLE IF EXISTS user")
         except sqlite3.OperationalError:
