@@ -97,196 +97,191 @@
   <script src="js-v3/constants.js"></script>
   <script src="js-v3/store.js"></script>
   <script>
-    // 初始化：从服务端拉数据后渲染
-    initStore(function() {
-      refreshProfileDisplay();
-      renderStats();
-      renderSpecs();
-      refreshJournals();
-    });
+    (function() {
+      // 安全 DOM 获取，避免微信等浏览器 null 报错
+      function $_(id) { return document.getElementById(id); }
 
-    // ===== 用户信息 =====
-    function refreshProfileDisplay() {
-      var avatarEl = document.getElementById('profileAvatar');
-      var av = USER.avatar || USER.name.charAt(0);
-      if (av.indexOf('data:image') === 0) {
-        avatarEl.innerHTML = '<img src="' + av + '" alt="头像" class="avatar-img">';
-        avatarEl.className = 'profile-avatar profile-avatar-clickable avatar-has-img';
-      } else {
-        avatarEl.textContent = av;
-        avatarEl.className = 'profile-avatar profile-avatar-clickable';
-      }
-      document.getElementById('userName').textContent = USER.name;
-
-      var parts = [];
-      if (USER.gender) parts.push(USER.gender);
-      if (USER.age) parts.push(USER.age + '岁');
-      if (USER.contact) parts.push('✉ ' + USER.contact);
-      document.getElementById('profileMeta').textContent = parts.join(' · ') || '点击右上角编辑，完善个人资料';
-
-      document.getElementById('userTitle').textContent = USER.level === 0 ? '入门 · 还没有段位' : USER.title + ' · 第 ' + USER.level + ' 段';
-      document.getElementById('userLevel').textContent = '当前：' + LEVELS[USER.level].name;
-    }
-
-    // ===== 编辑资料 =====
-    document.getElementById('btnEditProfile').addEventListener('click', function() {
-      document.getElementById('editName').value = USER.name;
-      document.getElementById('editGender').value = USER.gender || '';
-      document.getElementById('editAge').value = USER.age || '';
-      document.getElementById('editContact').value = USER.contact || '';
-      document.getElementById('profileEditCard').style.display = '';
-      document.getElementById('btnEditProfile').style.display = 'none';
-    });
-
-    document.getElementById('btnSaveProfile').addEventListener('click', function() {
-      var newName = document.getElementById('editName').value.trim();
-      if (newName) USER.name = newName;
-      USER.gender = document.getElementById('editGender').value;
-      USER.age = document.getElementById('editAge').value;
-      USER.contact = document.getElementById('editContact').value.trim();
-
-      // 保存到服务器
-      api.updateProfile({
-        name: USER.name,
-        gender: USER.gender,
-        age: USER.age,
-        contact: USER.contact
-      }).then(function(res) {
-        if (res && res.user) {
-          // 用服务器返回的数据更新本地
-          USER.name = res.user.name;
-          USER.gender = res.user.gender;
-          USER.age = res.user.age;
-          USER.contact = res.user.contact;
-        }
-        cacheSave();
+      // 初始化：从服务端拉数据后渲染
+      initStore(function() {
         refreshProfileDisplay();
-      }).catch(function() {
-        cacheSave();
-        refreshProfileDisplay();
-      });
-
-      document.getElementById('profileEditCard').style.display = 'none';
-      document.getElementById('btnEditProfile').style.display = '';
-    });
-
-    document.getElementById('btnCancelProfile').addEventListener('click', function() {
-      document.getElementById('profileEditCard').style.display = 'none';
-      document.getElementById('btnEditProfile').style.display = '';
-    });
-
-    // ===== 头像上传 =====
-    document.getElementById('avatarFileInput').addEventListener('change', function() {
-      var file = this.files[0];
-      if (!file) return;
-      if (file.size > 2 * 1024 * 1024) { alert('图片不能超过 2MB'); return; }
-
-      var reader = new FileReader();
-      reader.onload = function(e) {
-        var img = new Image();
-        img.onload = function() {
-          var canvas = document.createElement('canvas');
-          var outSize = 256;
-          canvas.width = outSize;
-          canvas.height = outSize;
-          var ctx = canvas.getContext('2d');
-          var crop = Math.min(img.width, img.height);
-          var sx = (img.width - crop) / 2;
-          var sy = (img.height - crop) / 2;
-          ctx.drawImage(img, sx, sy, crop, crop, 0, 0, outSize, outSize);
-          USER.avatar = canvas.toDataURL('image/jpeg', 0.6);
-          refreshProfileDisplay();
-          cacheSave();
-          // 头像同步到服务器
-          api.updateProfile({ avatar: USER.avatar }).catch(function() {});
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-      this.value = '';
-    });
-
-    // ===== 属性 =====
-    function renderStats() {
-      var el = document.getElementById('statsList');
-      if (!el) return;
-      var stats = USER.stats || {};
-      var sn = { coding: '编程能力', project: '项目经验', theory: '理论知识', tools: '工具掌握' };
-      var sc = { coding: 'fill-coding', project: 'fill-project', theory: 'fill-theory', tools: 'fill-tool' };
-      el.innerHTML = '';
-      Object.keys(stats).forEach(function(key) {
-        var val = stats[key] || 0;
-        el.innerHTML += '<div class="stat-item">' +
-          '<div class="stat-label"><span>' + (sn[key] || key) + '</span><span>' + val + '/100</span></div>' +
-          '<div class="stat-bar"><div class="stat-fill ' + (sc[key] || '') + '" style="width:' + val + '%"></div></div>' +
-          '</div>';
-      });
-    }
-
-    // ===== 专精方向 =====
-    function renderSpecs() {
-      var el = document.getElementById('specList');
-      if (USER.specializations.length === 0) {
-        el.innerHTML = '<p style="color:var(--text-dim);font-size:14px;">突破到更高段位后解锁专精方向。</p>';
-      } else {
-        el.innerHTML = USER.specializations.map(function(spec) {
-          return '<div class="badge-item ' + (spec.unlocked ? 'unlocked' : 'locked') + '">' +
-            '<div class="badge-icon">' + spec.icon + '</div>' +
-            '<div class="badge-name">' + spec.name + '</div>' +
-            '</div>';
-        }).join('');
-      }
-    }
-
-    // ===== 感悟 =====
-    document.getElementById('btnSaveJournal').addEventListener('click', function() {
-      var title = document.getElementById('journalTitle').value.trim();
-      var body = document.getElementById('journalBody').value.trim();
-      if (!title || !body) return;
-
-      api.addJournal({ title: title, body: body }).then(function(data) {
-        if (data && data.id) {
-          document.getElementById('journalTitle').value = '';
-          document.getElementById('journalBody').value = '';
-          var msg = document.getElementById('journalMsg');
-          msg.style.display = 'inline';
-          setTimeout(function() { msg.style.display = 'none'; }, 2000);
-          // 重新拉取感悟列表
-          refreshJournals();
-        }
-      });
-    });
-
-    function deleteJournal(id) {
-      api.deleteJournal(id).then(function() {
+        renderStats();
+        renderSpecs();
         refreshJournals();
       });
-    }
 
-    function refreshJournals() {
-      var el = document.getElementById('journalList');
-      api.getJournals().then(function(journals) {
-        USER.journals = journals || [];
-        if (!journals || journals.length === 0) {
-          el.innerHTML = '<p style="color:var(--text-dim);font-size:14px;">还没有感悟，去写第一篇吧。</p>';
+      // ===== 用户信息 =====
+      function refreshProfileDisplay() {
+        var avatarEl = $_('profileAvatar'); if (!avatarEl) return;
+        var av = USER.avatar || USER.name.charAt(0);
+        if (av.indexOf('data:image') === 0) {
+          avatarEl.innerHTML = '<img src="' + av + '" alt="头像" class="avatar-img">';
+          avatarEl.className = 'profile-avatar profile-avatar-clickable avatar-has-img';
         } else {
-          el.innerHTML = journals.map(function(e) {
-            return '<div class="journal-entry">' +
-              '<div class="entry-header">' +
-              '<div class="entry-title">' + e.title + '</div>' +
-              '<div style="display:flex;align-items:center;gap:8px;">' +
-              '<div class="entry-date">' + (e.date || '') + '</div>' +
-              '<button class="journal-del-btn" onclick="deleteJournal(' + e.id + ')" title="删除此感悟">✕</button>' +
-              '</div>' +
-              '</div>' +
-              '<div class="entry-body">' + e.body + '</div>' +
-              '</div>';
+          avatarEl.textContent = av;
+          avatarEl.className = 'profile-avatar profile-avatar-clickable';
+        }
+        var nm = $_('userName'); if (nm) nm.textContent = USER.name;
+
+        var parts = [];
+        if (USER.gender) parts.push(USER.gender);
+        if (USER.age) parts.push(USER.age + '岁');
+        if (USER.contact) parts.push('✉ ' + USER.contact);
+        var meta = $_('profileMeta'); if (meta) meta.textContent = parts.join(' · ') || '完善个人资料';
+
+        var ut = $_('userTitle'); if (ut) ut.textContent = USER.level === 0 ? '入门 · 还没有段位' : USER.title + ' · 第 ' + USER.level + ' 段';
+        var ul = $_('userLevel'); if (ul) ul.textContent = '当前：' + LEVELS[USER.level].name;
+      }
+
+      // ===== 编辑资料 =====
+      var btnEdit = $_('btnEditProfile');
+      if (btnEdit) btnEdit.addEventListener('click', function() {
+        var en = $_('editName'); if (en) en.value = USER.name;
+        var eg = $_('editGender'); if (eg) eg.value = USER.gender || '';
+        var ea = $_('editAge'); if (ea) ea.value = USER.age || '';
+        var ec = $_('editContact'); if (ec) ec.value = USER.contact || '';
+        var card = $_('profileEditCard'); if (card) card.style.display = '';
+        this.style.display = 'none';
+      });
+
+      var btnSave = $_('btnSaveProfile');
+      if (btnSave) btnSave.addEventListener('click', function() {
+        var en = $_('editName'); if (en && en.value.trim()) USER.name = en.value.trim();
+        var eg = $_('editGender'); if (eg) USER.gender = eg.value;
+        var ea = $_('editAge'); if (ea) USER.age = ea.value;
+        var ec = $_('editContact'); if (ec) USER.contact = ec.value.trim();
+
+        api.updateProfile({
+          name: USER.name, gender: USER.gender, age: USER.age, contact: USER.contact
+        }).then(function(res) {
+          if (res && res.user) {
+            USER.name = res.user.name; USER.gender = res.user.gender;
+            USER.age = res.user.age; USER.contact = res.user.contact;
+          }
+        }).catch(function() {}).then(function() {
+          cacheSave(); refreshProfileDisplay();
+        });
+
+        var card = $_('profileEditCard'); if (card) card.style.display = 'none';
+        var be = $_('btnEditProfile'); if (be) be.style.display = '';
+      });
+
+      var btnCancel = $_('btnCancelProfile');
+      if (btnCancel) btnCancel.addEventListener('click', function() {
+        var card = $_('profileEditCard'); if (card) card.style.display = 'none';
+        var be = $_('btnEditProfile'); if (be) be.style.display = '';
+      });
+
+      // ===== 头像上传 =====
+      var avInput = $_('avatarFileInput');
+      if (avInput) avInput.addEventListener('change', function() {
+        var file = this.files[0];
+        if (!file) return;
+        if (file.size > 2 * 1024 * 1024) { alert('图片不能超过 2MB'); return; }
+        var reader = new FileReader();
+        reader.onload = function(e) {
+          var img = new Image();
+          img.onload = function() {
+            var canvas = document.createElement('canvas');
+            var outSize = 256; canvas.width = outSize; canvas.height = outSize;
+            var ctx = canvas.getContext('2d');
+            var crop = Math.min(img.width, img.height);
+            ctx.drawImage(img, (img.width-crop)/2, (img.height-crop)/2, crop, crop, 0, 0, outSize, outSize);
+            USER.avatar = canvas.toDataURL('image/jpeg', 0.6);
+            refreshProfileDisplay(); cacheSave();
+            api.updateProfile({ avatar: USER.avatar }).catch(function() {});
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+        this.value = '';
+      });
+
+      // ===== 属性 =====
+      function renderStats() {
+        var el = $_('statsList'); if (!el) return;
+        var stats = USER.stats || {};
+        var sn = { coding: '编程能力', project: '项目经验', theory: '理论知识', tools: '工具掌握' };
+        var sc = { coding: 'fill-coding', project: 'fill-project', theory: 'fill-theory', tools: 'fill-tool' };
+        el.innerHTML = '';
+        Object.keys(stats).forEach(function(key) {
+          var val = stats[key] || 0;
+          el.innerHTML += '<div class="stat-item"><div class="stat-label"><span>' + (sn[key]||key) + '</span><span>' + val + '/100</span></div><div class="stat-bar"><div class="stat-fill ' + (sc[key]||'') + '" style="width:' + val + '%"></div></div></div>';
+        });
+      }
+
+      function renderSpecs() {
+        var el = $_('specList');
+        if (USER.specializations.length === 0) {
+          el.innerHTML = '<p style="color:var(--text-dim);font-size:14px;">突破到更高段位后解锁专精方向。</p>';
+        } else {
+          el.innerHTML = USER.specializations.map(function(s) {
+            return '<div class="badge-item ' + (s.unlocked?'unlocked':'locked') + '"><div class="badge-icon">' + s.icon + '</div><div class="badge-name">' + s.name + '</div></div>';
           }).join('');
         }
-      }).catch(function() {
-        el.innerHTML = '<p style="color:var(--text-dim);font-size:14px;">加载失败，请检查网络。</p>';
+      }
+
+      // ===== 感悟 =====
+      var journalMsg = $_('journalMsg');
+      function showJournalFeedback(text, isError) {
+        if (!journalMsg) return;
+        journalMsg.textContent = text;
+        journalMsg.style.color = isError ? '#d97706' : '#16a34a';
+        journalMsg.style.display = 'inline';
+        setTimeout(function() { journalMsg.style.display = 'none'; }, 3000);
+      }
+
+      var btnJournal = $_('btnSaveJournal');
+      if (btnJournal) btnJournal.addEventListener('click', function() {
+        var titleEl = $_('journalTitle'), bodyEl = $_('journalBody');
+        var title = titleEl ? titleEl.value.trim() : '';
+        var body = bodyEl ? bodyEl.value.trim() : '';
+        if (!title || !body) return;
+
+        // 显示保存中
+        this.disabled = true;
+        this.textContent = '保存中...';
+        showJournalFeedback('保存中...');
+
+        api.addJournal({ title: title, body: body }).then(function(data) {
+          if (data && data.id) {
+            if (titleEl) titleEl.value = '';
+            if (bodyEl) bodyEl.value = '';
+            showJournalFeedback('✓ 已保存到云端');
+            refreshJournals();
+          } else {
+            showJournalFeedback('⚠ 保存失败，请重试', true);
+          }
+        }).catch(function() {
+          showJournalFeedback('⚠ 网络错误，感悟未保存', true);
+        }).then(function() {
+          var btn = $_('btnSaveJournal');
+          if (btn) { btn.disabled = false; btn.textContent = '写下感悟'; }
+        });
       });
-    }
+
+      function deleteJournal(id) {
+        api.deleteJournal(id).then(function() { refreshJournals(); })
+          .catch(function() { showJournalFeedback('⚠ 删除失败', true); });
+      }
+
+      window.deleteJournal = deleteJournal;  // inline onclick 需要
+
+      function refreshJournals() {
+        var el = $_('journalList'); if (!el) return;
+        api.getJournals().then(function(journals) {
+          USER.journals = journals || [];
+          if (!journals || journals.length === 0) {
+            el.innerHTML = '<p style="color:var(--text-dim);font-size:14px;">还没有感悟，去写第一篇吧。</p>';
+          } else {
+            el.innerHTML = journals.map(function(e) {
+              return '<div class="journal-entry"><div class="entry-header"><div class="entry-title">' + e.title + '</div><div style="display:flex;align-items:center;gap:8px;"><div class="entry-date">' + (e.date||'') + '</div><button class="journal-del-btn" onclick="deleteJournal(' + e.id + ')" title="删除">✕</button></div></div><div class="entry-body">' + e.body + '</div></div>';
+            }).join('');
+          }
+        }).catch(function() {
+          el.innerHTML = '<p style="color:var(--text-dim);font-size:14px;">加载失败，请检查网络。</p>';
+        });
+      }
+    })();
   </script>
 </body>
 </html>

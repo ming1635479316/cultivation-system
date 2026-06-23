@@ -46,94 +46,71 @@
   <script src="js-v3/api.js"></script>
   <script src="js-v3/store.js"></script>
   <script>
-    var _actionMsgId = null;
+    (function() {
+      function $_(id) { return document.getElementById(id); }
+      var _actionMsgId = null;
 
-    function renderMessages() {
-      var el = document.getElementById('msgList');
-      if (!el) return;
-
-      if (MESSAGES.length === 0) {
-        el.innerHTML = '<p style="color:var(--text-dim);font-size:14px;">暂无消息。</p>';
-        return;
+      function renderMessages() {
+        var el = $_('msgList'); if (!el) return;
+        if (MESSAGES.length === 0) {
+          el.innerHTML = '<p style="color:var(--text-dim);font-size:14px;">暂无消息。</p>'; return;
+        }
+        el.innerHTML = MESSAGES.slice().sort(function(a, b) {
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          return 0;
+        }).map(function(msg) {
+          return '<div class="msg-item' + (msg.unread?' unread':'') + (msg.pinned?' msg-pinned':'') +
+            '" onclick="openActionSheet(' + msg.id + ')">' +
+            (msg.icon ? '<div class="msg-icon">'+msg.icon+'</div>' : '') +
+            '<div class="msg-body"><div class="msg-text">'+msg.text+'</div><div class="msg-time">'+(msg.time||'')+'</div></div>' +
+            '<span class="msg-more">⋯</span></div>';
+        }).join('');
       }
 
-      var sorted = MESSAGES.slice().sort(function(a, b) {
-        if (a.pinned && !b.pinned) return -1;
-        if (!a.pinned && b.pinned) return 1;
-        return 0;
+      window.openActionSheet = function(msgId) {
+        _actionMsgId = msgId;
+        var msg = MESSAGES.find(function(m) { return m.id === msgId; });
+        if (!msg) return;
+        var asm = $_('actionSheetMsg'); if (asm) asm.textContent = msg.text;
+        var asp = $_('actionSheetPin'); if (asp) asp.textContent = msg.pinned ? '取消置顶' : '置顶';
+        var aso = $_('actionSheetOverlay'); if (aso) aso.classList.add('show');
+      };
+
+      window.closeActionSheet = function() {
+        var aso = $_('actionSheetOverlay'); if (aso) aso.classList.remove('show');
+        _actionMsgId = null;
+      };
+
+      var pinBtn = $_('actionSheetPin');
+      if (pinBtn) pinBtn.addEventListener('click', function() {
+        if (_actionMsgId === null) return;
+        var msg = MESSAGES.find(function(m) { return m.id === _actionMsgId; });
+        if (!msg) return;
+        api.updateMessage(_actionMsgId, { icon: msg.icon||'', text: msg.text, time: msg.time, unread: msg.unread, pinned: !msg.pinned })
+          .then(function() { msg.pinned = !msg.pinned; cacheSave(); closeActionSheet(); renderMessages(); })
+          .catch(function() { closeActionSheet(); });
       });
 
-      el.innerHTML = sorted.map(function(msg) {
-        return '<div class="msg-item' + (msg.unread ? ' unread' : '') + (msg.pinned ? ' msg-pinned' : '') +
-          '" onclick="openActionSheet(' + msg.id + ')">' +
-          (msg.icon ? '<div class="msg-icon">' + msg.icon + '</div>' : '') +
-          '<div class="msg-body">' +
-          '<div class="msg-text">' + msg.text + '</div>' +
-          '<div class="msg-time">' + (msg.time || '') + '</div>' +
-          '</div>' +
-          '<span class="msg-more">⋯</span>' +
-          '</div>';
-      }).join('');
-    }
-
-    function openActionSheet(msgId) {
-      _actionMsgId = msgId;
-      var msg = MESSAGES.find(function(m) { return m.id === msgId; });
-      if (!msg) return;
-      document.getElementById('actionSheetMsg').textContent = msg.text;
-      document.getElementById('actionSheetPin').textContent = msg.pinned ? '取消置顶' : '置顶';
-      document.getElementById('actionSheetOverlay').classList.add('show');
-    }
-
-    function closeActionSheet() {
-      document.getElementById('actionSheetOverlay').classList.remove('show');
-      _actionMsgId = null;
-    }
-
-    // 置顶/取消置顶
-    document.getElementById('actionSheetPin').addEventListener('click', function() {
-      if (_actionMsgId === null) return;
-      var msg = MESSAGES.find(function(m) { return m.id === _actionMsgId; });
-      if (!msg) return;
-      api.updateMessage(_actionMsgId, {
-        icon: msg.icon || '',
-        text: msg.text,
-        time: msg.time,
-        unread: msg.unread,
-        pinned: !msg.pinned
-      }).then(function() {
-        // 更新本地
-        msg.pinned = !msg.pinned;
-        cacheSave();
-        closeActionSheet();
-        renderMessages();
+      var delBtn = $_('actionSheetDelete');
+      if (delBtn) delBtn.addEventListener('click', function() {
+        if (_actionMsgId === null) return;
+        api.deleteMessage(_actionMsgId).then(function() {
+          MESSAGES = MESSAGES.filter(function(m) { return m.id !== _actionMsgId; });
+          cacheSave(); closeActionSheet(); renderMessages();
+        }).catch(function() { closeActionSheet(); });
       });
-    });
 
-    // 删除消息
-    document.getElementById('actionSheetDelete').addEventListener('click', function() {
-      if (_actionMsgId === null) return;
-      api.deleteMessage(_actionMsgId).then(function() {
-        MESSAGES = MESSAGES.filter(function(m) { return m.id !== _actionMsgId; });
-        cacheSave();
-        closeActionSheet();
-        renderMessages();
+      var readBtn = $_('btnMarkAllRead');
+      if (readBtn) readBtn.addEventListener('click', function() {
+        api.markAllRead().then(function() {
+          MESSAGES.forEach(function(m) { m.unread = false; });
+          cacheSave(); renderMessages();
+        });
       });
-    });
 
-    // 全部已读
-    document.getElementById('btnMarkAllRead').addEventListener('click', function() {
-      api.markAllRead().then(function() {
-        MESSAGES.forEach(function(m) { m.unread = false; });
-        cacheSave();
-        renderMessages();
-      });
-    });
-
-    // 初始化
-    initStore(function() {
-      renderMessages();
-    });
+      initStore(function() { renderMessages(); });
+    })();
   </script>
 </body>
 </html>

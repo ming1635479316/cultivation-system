@@ -17,7 +17,14 @@ function apiFetch(url, options) {
   options = options || {};
   options.headers = options.headers || {};
   options.headers['Authorization'] = 'Bearer ' + (AUTH_TOKEN || '');
+
+  // 10 秒超时（微信 WebView 可能卡住不返回）
+  var controller = new AbortController();
+  options.signal = controller.signal;
+  var timeoutId = setTimeout(function() { controller.abort(); }, 10000);
+
   return fetch(url, options).then(function(r) {
+    clearTimeout(timeoutId);
     if (r.status === 401) {
       localStorage.removeItem('cultivation_token');
       localStorage.removeItem('cultivation_user');
