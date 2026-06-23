@@ -1155,9 +1155,22 @@ a:hover { opacity: 0.8; }
   background: var(--bg-card); border: 1px solid var(--border);
   border-radius: 12px; cursor: pointer; box-shadow: var(--shadow);
   transition: transform 0.15s;
+  align-self: flex-end;
 }
 .top-card:hover { transform: translateY(-2px); }
-.top-card.top-1 { border-color: var(--gold); background: linear-gradient(135deg, #fff9e6, #fff); }
+.top-card.top-1 {
+  border-color: var(--gold);
+  background: linear-gradient(135deg, #fff9e6, #fff9e6, #fff);
+  align-self: flex-start;
+  padding: 24px 12px 20px;
+  transform: translateY(-12px);
+  box-shadow: 0 4px 20px rgba(184,134,11,0.3);
+}
+.top-card.top-1 .top-medal { font-size: 40px; }
+.top-card.top-1 .top-avatar { width: 60px; height: 60px; line-height: 60px; font-size: 24px; }
+.top-card.top-1 .top-name { font-size: 16px; }
+.top-card.top-1 .top-level { font-size: 13px; }
+.top-card.top-1:hover { transform: translateY(-14px); }
 .top-medal { font-size: 28px; margin-bottom: 4px; }
 .top-avatar { margin: 0 auto 8px; }
 .top-name { font-weight: 600; font-size: 14px; }

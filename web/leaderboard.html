@@ -63,7 +63,7 @@ function loadBoard() {
     var top3 = board.slice(0, 3);
     var top3html = '';
     top3.forEach(function(entry, i) {
-      var order = [0, 1, 2]; // 金 银 铜 排列
+      var order = [1, 0, 2]; // 银 金 铜 排列（领奖台）
       var pos = order[i];
       top3html += '<div class="top-card top-' + (pos + 1) + '" onclick="location.href=\'user.html?id=' + entry.id + '\'">'
         + '<div class="top-medal">' + MEDALS[pos] + '</div>'
