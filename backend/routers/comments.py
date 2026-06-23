@@ -15,7 +15,7 @@ def _comment_with_author(conn, row):
     """将评论行附加作者信息。"""
     d = row_to_dict(row)
     author = conn.execute(
-        "SELECT username, name, avatar, title, level FROM users WHERE id=?",
+        "SELECT id, username, name, avatar, title, level FROM users WHERE id=?",
         (d["user_id"],)
     ).fetchone()
     if author:
@@ -28,7 +28,7 @@ def list_comments(post_id: int, request: Request):
     get_user_id(request)
     with get_db() as conn:
         rows = conn.execute(
-            """SELECT c.*, u.username, u.name, u.avatar, u.title, u.level
+            """SELECT c.*, u.id AS author_id, u.username, u.name, u.avatar, u.title, u.level
                FROM comments c JOIN users u ON c.user_id = u.id
                WHERE c.post_id=? ORDER BY c.created_at ASC""",
             (post_id,),
@@ -38,7 +38,7 @@ def list_comments(post_id: int, request: Request):
         for r in rows:
             d = row_to_dict(r)
             d["author"] = {
-                "username": r["username"], "name": r["name"],
+                "id": r["author_id"], "username": r["username"], "name": r["name"],
                 "avatar": r["avatar"], "title": r["title"], "level": r["level"],
             }
             all_comments.append(d)

@@ -18,7 +18,7 @@ def _post_with_author(conn, row):
     d = row_to_dict(row)
     d["tags"] = json_loads(d.get("tags", "[]"))
     author = conn.execute(
-        "SELECT username, name, avatar, title, level FROM users WHERE id=?",
+        "SELECT id, username, name, avatar, title, level FROM users WHERE id=?",
         (d["user_id"],)
     ).fetchone()
     if author:
