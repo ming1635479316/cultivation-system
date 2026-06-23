@@ -5,8 +5,9 @@ FastAPI 应用组装、生命周期、中间件注册
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from config import ALLOW_ORIGINS, WEB_DIR
@@ -36,11 +37,11 @@ app.add_middleware(
 @app.middleware("http")
 async def add_no_cache_headers(request, call_next):
     response = await call_next(request)
-    # 静态文件和 API 都禁止缓存
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
     return response
+
 
 # 注册路由
 app.include_router(auth.router)
@@ -57,6 +58,31 @@ def health():
     return {"status": "ok", "db": os.path.exists(DB_PATH), "version": "3.0.0"}
 
 
+# ============================================================
+# 微信浏览器检测：打开链接前引导用户用系统浏览器
+# ============================================================
+
+WECHAT_GUIDE_PATH = os.path.join(WEB_DIR, "wechat-guide.html")
+
+
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    """根路径：微信浏览器返回引导页，普通浏览器正常进入。"""
+    ua = request.headers.get("User-Agent", "")
+    if "MicroMessenger" in ua and os.path.isfile(WECHAT_GUIDE_PATH):
+        return HTMLResponse(
+            content=open(WECHAT_GUIDE_PATH, "r", encoding="utf-8").read(),
+            status_code=200,
+        )
+    # 普通浏览器 → 正常走静态文件
+    if os.path.isfile(os.path.join(WEB_DIR, "index.html")):
+        return HTMLResponse(
+            content=open(os.path.join(WEB_DIR, "index.html"), "r", encoding="utf-8").read(),
+            status_code=200,
+        )
+    return HTMLResponse(content="<h1>页面未找到</h1>", status_code=404)
+
+
 # 静态文件挂载（必须在所有 API 路由之后）
 if os.path.isdir(WEB_DIR):
     app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
@@ -65,7 +91,7 @@ if os.path.isdir(WEB_DIR):
 if __name__ == "__main__":
     import uvicorn
     host, port = "0.0.0.0", 8001
-    print(f"数据库: {__import__('os').path.join(os.path.dirname(os.path.abspath(__file__)), 'cultivation.db')}")
+    print(f"数据库: {os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cultivation.db')}")
     print(f"服务: http://{host}:{port}")
     print(f"文档: http://{host}:{port}/docs")
     uvicorn.run("main:app", host=host, port=port, reload=True)

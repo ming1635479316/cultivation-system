@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>计算机修行录</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #fafaf9; color: #1c1917;
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #000; color: #f5f5f5; }
+    }
+    .card {
+      background: #fff; border: 1px solid #e7e5e4; border-radius: 12px;
+      padding: 36px 28px; max-width: 360px; width: 100%; text-align: center;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    }
+    @media (prefers-color-scheme: dark) {
+      .card { background: #0d0d0d; border-color: #222; }
+    }
+    .icon { font-size: 48px; margin-bottom: 16px; }
+    .title { font-size: 20px; font-weight: 700; margin-bottom: 20px; }
+    .steps { text-align: left; background: #fef3c7; border-radius: 10px; padding: 20px 18px; margin-bottom: 16px; }
+    @media (prefers-color-scheme: dark) {
+      .steps { background: #292524; }
+    }
+    .step { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 14px; }
+    .step:last-child { margin-bottom: 0; }
+    .step-num {
+      flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%;
+      background: #d97706; color: #fff; font-size: 13px; font-weight: bold;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .step-text { font-size: 15px; color: #92400e; line-height: 1.6; }
+    @media (prefers-color-scheme: dark) {
+      .step-text { color: #fcd34d; }
+    }
+    .step-text strong { color: #d97706; }
+    @media (prefers-color-scheme: dark) {
+      .step-text strong { color: #fbbf24; }
+    }
+    .hint { font-size: 12px; color: #a8a29e; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🔗</div>
+    <div class="title">在浏览器中打开</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">点击右上角 <strong>···</strong></div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">选择 <strong>在浏览器中打开</strong></div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">在系统浏览器中登录使用</div>
+      </div>
+    </div>
+    <div class="hint">微信内置浏览器兼容性有限，建议用 Chrome / Safari 打开获得完整体验</div>
+  </div>
+</body>
+</html>
