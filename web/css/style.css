@@ -1167,7 +1167,7 @@ a:hover { opacity: 0.8; }
   box-shadow: 0 4px 20px rgba(184,134,11,0.3);
 }
 .top-card.top-1 .top-medal { font-size: 40px; }
-.top-card.top-1 .top-avatar { width: 60px; height: 60px; line-height: 60px; font-size: 24px; }
+.top-card.top-1 .top-avatar { } /* 尺寸由 avatarHtml() inline 控制 */
 .top-card.top-1 .top-name { font-size: 16px; }
 .top-card.top-1 .top-level { font-size: 13px; }
 .top-card.top-1:hover { transform: translateY(-14px); }
