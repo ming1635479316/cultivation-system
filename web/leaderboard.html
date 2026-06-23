@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0">
 <title>修炼排行榜 · 计算机修行录</title>
 <link rel="icon" href="favicon.png" type="image/png">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=2">
 </head>
 <body>
 
@@ -49,10 +49,10 @@ function avatarHtml(entry, size) {
   var av = entry.avatar || '';
   var s = size || 36;
   if (av.startsWith('data:image/')) {
-    return '<img src="' + av + '" width="' + s + '" height="' + s + '" style="border-radius:50%;object-fit:cover;display:block;" alt="">';
+    return '<img src="' + av + '" width="' + s + '" height="' + s + '" style="border-radius:50%;object-fit:cover;flex-shrink:0;vertical-align:middle;" alt="">';
   }
-  var ch = av || (entry.name || entry.username || '?')[0];
-  return '<span style="display:inline-flex;align-items:center;justify-content:center;width:' + s + 'px;height:' + s + 'px;border-radius:50%;background:' + LEVEL_COLORS[Math.min(entry.level, 9)] + ';color:#fff;font-size:' + Math.round(s*0.42) + 'px;">' + escapeHtml(ch) + '</span>';
+  var ch = (av || entry.name || entry.username || '?')[0];
+  return '<span style="display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:' + s + 'px;height:' + s + 'px;border-radius:50%;background:' + LEVEL_COLORS[Math.min(entry.level, 9)] + ';color:#fff;font-size:' + Math.round(s*0.42) + 'px;">' + escapeHtml(ch) + '</span>';
 }
 
 function loadBoard() {
@@ -87,7 +87,7 @@ function loadBoard() {
       var medalHtml = entry.rank <= 3 ? ' <span style="font-size:18px;">' + MEDALS[entry.rank - 1] + '</span>' : '';
       listHtml += '<div class="lb-row" onclick="location.href=\'user.html?id=' + entry.id + '\'">'
         + '<span class="lb-rank">#' + entry.rank + medalHtml + '</span>'
-        + avatarHtml(entry, 36)
+        + '<span class="lb-avatar">' + avatarHtml(entry, 36) + '</span>'
         + '<div class="lb-info">'
         + '<span class="lb-name">' + escapeHtml(entry.name || entry.username) + '</span>'
         + '<span class="lb-title">' + escapeHtml(entry.title) + '</span>'
