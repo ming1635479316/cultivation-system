@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0">
 <title>用户主页 · 计算机修行录</title>
 <link rel="icon" href="favicon.png" type="image/png">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=2">
 </head>
 <body>
 
@@ -20,7 +20,6 @@
     <a href="leaderboard.html">排行</a>
     <a href="dms.html">私信</a>
     <a href="profile.html">我的</a>
-    <a href="messages.html">消息</a>
     <a href="#" onclick="logout();return false" style="color:var(--text-muted);font-size:12px;margin-left:8px;">退出</a>
   </div>
 </nav>
@@ -39,6 +38,16 @@ var userId = parseInt(new URLSearchParams(location.search).get('id'));
 var STAT_LABELS = { coding: '编程能力', project: '项目经验', theory: '理论知识', tools: '工具掌握' };
 var STAT_COLORS = { coding: '#78716c', project: 'var(--green)', theory: '#6b6b8a', tools: 'var(--gold)' };
 
+function avatarHtmlLarge(u, size) {
+  var av = u.avatar || '';
+  var s = size || 80;
+  if (av.startsWith('data:image/')) {
+    return '<img src="' + av + '" width="' + s + '" height="' + s + '" style="border-radius:50%;object-fit:cover;display:block;" alt="">';
+  }
+  var ch = av || (u.name || u.username || '?')[0];
+  return '<span style="display:inline-flex;align-items:center;justify-content:center;width:' + s + 'px;height:' + s + 'px;border-radius:50%;background:var(--seal-light);color:var(--seal);font-size:' + Math.round(s*0.4) + 'px;font-weight:600;">' + escapeHtml(ch) + '</span>';
+}
+
 function loadProfile() {
   if (!userId) {
     document.getElementById('profileContent').innerHTML = '<p style="color:var(--seal);text-align:center;padding:40px;">用户不存在</p>';
@@ -50,18 +59,23 @@ function loadProfile() {
     var u = data.user;
     document.title = (u.name || u.username) + ' · 修炼录';
 
+    var isOwnProfile = AUTH_USER && AUTH_USER.id === u.id;
+
     var html = '';
     // 头像区
-    html += '<div class="profile-header">';
-    var av = u.avatar || ''; if (av.length > 10 || av.startsWith('data:')) av = '';
-    html += '<div class="profile-avatar" style="background:var(--seal-light);color:var(--seal);">' + escapeHtml((av || u.name || '?')[0]) + '</div>';
-    html += '<div class="profile-info">';
-    html += '<h2>' + escapeHtml(u.name || u.username) + '</h2>';
-    html += '<p style="color:var(--text-dim);">' + escapeHtml(u.title || '修炼者') + ' · 第' + (u.level || 0) + '段</p>';
-    if (u.gender || u.age) html += '<p style="font-size:13px;color:var(--text-muted);">' + [u.gender, u.age].filter(Boolean).join(' · ') + '</p>';
-    if (u.contact) html += '<p style="font-size:13px;color:var(--text-muted);">📧 ' + escapeHtml(u.contact) + '</p>';
-    html += '<p style="font-size:12px;color:var(--text-muted);">加入于 ' + (u.joinedDate || '?') + '</p>';
-    html += '<a href="dms.html?to=' + u.id + '" class="btn-save" style="display:inline-block;margin-top:8px;text-decoration:none;font-size:13px;">✉ 发送私信</a>';
+    html += '<div class="profile-header" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">';
+    html += '<div style="flex-shrink:0;">' + avatarHtmlLarge(u, 80) + '</div>';
+    html += '<div class="profile-info" style="flex:1;min-width:0;">';
+    html += '<h2 style="margin:0;">' + escapeHtml(u.name || u.username) + '</h2>';
+    html += '<p style="color:var(--text-dim);margin:4px 0;">' + escapeHtml(u.title || '修炼者') + ' · ' + levelName(u.level || 0) + '</p>';
+    if (u.gender || u.age) html += '<p style="font-size:13px;color:var(--text-muted);margin:0;">' + [u.gender, u.age].filter(Boolean).join(' · ') + '</p>';
+    if (u.contact) html += '<p style="font-size:13px;color:var(--text-muted);margin:0;">📧 ' + escapeHtml(u.contact) + '</p>';
+    html += '<p style="font-size:12px;color:var(--text-muted);margin:4px 0 0;">加入于 ' + (u.joinedDate || '?') + '</p>';
+
+    // 发私信按钮 — 不给自己显示
+    if (!isOwnProfile) {
+      html += '<a href="dms.html?to=' + u.id + '" class="btn-save" style="display:inline-block;margin-top:8px;text-decoration:none;font-size:13px;">✉ 发送私信</a>';
+    }
     html += '</div></div>';
 
     // 战力
