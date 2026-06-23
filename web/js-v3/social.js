@@ -99,3 +99,38 @@ function formatPower(n) {
   if (n >= 10000) return (n / 10000).toFixed(1).replace(/\.0$/, '') + '万';
   return n.toLocaleString();
 }
+
+// 删除按钮（仅自己的帖子/评论显示）
+function renderDeleteBtn(type, id, authorId) {
+  var curId = (AUTH_USER && AUTH_USER.id);
+  if (curId && curId === authorId) {
+    return '<button class="btn-del-mini" data-del-type="' + type + '" data-del-id="' + id + '" title="删除" onclick="event.stopPropagation();">✕</button>';
+  }
+  return '';
+}
+
+// 委托删除事件
+function bindDeleteEvents(container, onDeleted) {
+  if (!container) return;
+  container.querySelectorAll('.btn-del-mini').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      e.preventDefault();
+      var type = btn.dataset.delType;
+      var id = parseInt(btn.dataset.delId);
+      if (!confirm('确定要删除吗？')) return;
+      if (type === 'post') {
+        api.deletePost(id).then(function() {
+          if (onDeleted) onDeleted();
+        }).catch(function() {});
+      } else if (type === 'comment') {
+        // 需要从父级找到 postId
+        var postIdEl = document.getElementById('postId');
+        var postId = postIdEl ? parseInt(postIdEl.value) : (window.postId || 0);
+        api.deleteComment(postId, id).then(function() {
+          if (onDeleted) onDeleted();
+        }).catch(function() {});
+      }
+    });
+  });
+}

@@ -107,9 +107,9 @@ function loadPosts(sort, page, append) {
     });
 
     document.getElementById('btnLoadMore').style.display = data.posts.length >= 20 ? '' : 'none';
-    bindVoteEvents(document.getElementById('postList'), function(res) {
-      // 投票后更新分数
-      var group = document.querySelector('.vote-group[data-id="' + res.user_vote + '"]');
+    bindVoteEvents(document.getElementById('postList'));
+    bindDeleteEvents(document.getElementById('postList'), function() {
+      loadPosts(currentSort, 1);
     });
   }).catch(function() {
     document.getElementById('postList').innerHTML = '<p style="color:var(--seal);text-align:center;padding:40px;">加载失败，请检查网络后刷新</p>';
@@ -120,10 +120,12 @@ function renderPostCard(p) {
   var typeLabel = p.type === 'question' ? '问答' : '文章';
   var typeCls = p.type === 'question' ? 'type-q' : 'type-a';
   var tags = (typeof p.tags === 'string' ? JSON.parse(p.tags || '[]') : (p.tags || []));
+  var authorId = p.author ? (p.author.id || p.author.user_id) : p.user_id;
   return '<div class="post-card" onclick="location.href=\'post.html?id=' + p.id + '\'">'
     + '<div class="post-card-header">'
     + renderAuthor(p.author)
     + '<span class="post-time">' + formatTime(p.created_at) + '</span>'
+    + renderDeleteBtn('post', p.id, authorId)
     + '</div>'
     + '<h3 class="post-card-title">' + escapeHtml(p.title) + '</h3>'
     + '<p class="post-card-preview">' + escapeHtml((p.content || '').substring(0, 200)) + '</p>'

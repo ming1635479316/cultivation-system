@@ -1248,3 +1248,11 @@ a:hover { opacity: 0.8; }
   .nav-links a { font-size: 11px; }
 }
 
+
+/* 删除按钮（帖子/评论） */
+.btn-del-mini {
+  background: none; border: none; color: var(--text-muted);
+  font-size: 14px; cursor: pointer; padding: 2px 6px;
+  border-radius: 4px; margin-left: auto; flex-shrink: 0;
+}
+.btn-del-mini:hover { color: var(--seal); background: rgba(192,57,43,0.1); }

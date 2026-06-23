@@ -8,7 +8,7 @@
 <meta http-equiv="Expires" content="0">
 <title>帖子 · 计算机修行录</title>
 <link rel="icon" href="favicon.png" type="image/png">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=2">
 </head>
 <body>
 
@@ -78,9 +78,11 @@ function loadPost() {
 
     document.title = p.title + ' · 修炼社区';
 
+    var authorId = p.author ? (p.author.id || p.author.user_id) : p.user_id;
     var html = '<div class="post-detail-header">'
       + renderAuthor(p.author)
       + '<span class="post-time">' + formatTime(p.created_at) + '</span>'
+      + renderDeleteBtn('post', p.id, authorId)
       + '</div>'
       + '<h2 class="post-detail-title">' + escapeHtml(p.title) + '</h2>'
       + '<span class="post-type-badge ' + typeCls + '">' + typeLabel + '</span>'
@@ -92,6 +94,10 @@ function loadPost() {
 
     document.getElementById('postDetail').innerHTML = html;
     bindVoteEvents(document.getElementById('postDetail'));
+    bindDeleteEvents(document.getElementById('postDetail'), function() {
+      // 帖子被删除后返回社区
+      window.location.href = 'community.html';
+    });
   }).catch(function() {
     document.getElementById('postDetail').innerHTML = '<p style="color:var(--seal);">加载失败</p>';
   });
@@ -117,6 +123,7 @@ function loadComments() {
     document.getElementById('commentCount').textContent = count;
     bindVoteEvents(list);
     bindReplyEvents(list);
+    bindDeleteEvents(list, function() { loadComments(); });
   }).catch(function() {
     document.getElementById('commentList').innerHTML = '<p style="color:var(--seal);">加载评论失败</p>';
   });
@@ -124,10 +131,12 @@ function loadComments() {
 
 function renderComment(c, isReply) {
   var indent = isReply ? ' comment-reply' : '';
+  var authorId = c.author ? (c.author.id || c.author.user_id) : c.user_id;
   var html = '<div class="comment-item' + indent + '" id="comment-' + c.id + '">'
     + '<div class="comment-header">'
     + renderAuthor(c.author)
     + '<span class="post-time">' + formatTime(c.created_at) + '</span>'
+    + renderDeleteBtn('comment', c.id, authorId)
     + '</div>'
     + '<div class="comment-body">' + escapeHtml(c.content) + '</div>'
     + '<div class="comment-actions">'
