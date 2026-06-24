@@ -212,20 +212,28 @@ def init_db():
                 d = dict(old)
                 existing = conn.execute("SELECT id FROM users WHERE id=1").fetchone()
                 if not existing:
-                    import os, secrets
-                    admin_pw = os.environ.get("ADMIN_PASSWORD") or secrets.token_urlsafe(10)
-                    conn.execute(
-                        """INSERT INTO users (id, username, password, name, avatar, title, level,
-                           gender, age, contact, joined_date, specializations, completed_tasks)
-                           VALUES (1, 'admin', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                        (_hash_password(admin_pw), d.get('name', '易'), d.get('avatar', '易'),
-                         d.get('title', '修炼者'), d.get('level', 0), d.get('gender', ''),
-                         d.get('age', ''), d.get('contact', ''), d.get('joined_date', '2026-06-13'),
-                         d.get('specializations', '[]'), d.get('completed_tasks', '[]')))
-                    import sys
-                    print(f"[init_db] admin 密码已迁移，新密码: {admin_pw}", file=sys.stderr)
-            conn.execute("DROP TABLE IF EXISTS user_old")
-            conn.execute("DROP TABLE IF EXISTS user")
+                    import os
+                    admin_pw = os.environ.get("ADMIN_PASSWORD")
+                    if not admin_pw:
+                        from logger import logger
+                        logger.warning(
+                            "admin 迁移需要 ADMIN_PASSWORD 环境变量，请设置后重启服务",
+                            extra={"extra_data": {"hint": "export ADMIN_PASSWORD=<your-password>"}},
+                        )
+                    else:
+                        conn.execute(
+                            """INSERT INTO users (id, username, password, name, avatar, title, level,
+                               gender, age, contact, joined_date, specializations, completed_tasks)
+                               VALUES (1, 'admin', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                            (_hash_password(admin_pw), d.get('name', '易'), d.get('avatar', '易'),
+                             d.get('title', '修炼者'), d.get('level', 0), d.get('gender', ''),
+                             d.get('age', ''), d.get('contact', ''), d.get('joined_date', '2026-06-13'),
+                             d.get('specializations', '[]'), d.get('completed_tasks', '[]')))
+                        from logger import logger
+                        logger.info("admin 旧数据迁移完成", extra={"extra_data": {"username": "admin"}})
+                        # 迁移成功后清理旧表
+                        conn.execute("DROP TABLE IF EXISTS user_old")
+                        conn.execute("DROP TABLE IF EXISTS user")
         except sqlite3.OperationalError:
             pass
 
