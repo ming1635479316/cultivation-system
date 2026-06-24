@@ -189,27 +189,3 @@ var LEVELS = [
     quiz: []
   }
 ];
-
-// 关卡验证题（后续迁移到后端）
-var TASK_CHECKS = {
-  "1-0": { q: "Python 源文件的正确扩展名是？", opts: [".js", ".py", ".java", ".html"], ans: 1 },
-  "1-1": { q: "Python 中，if 后面跟的条件表达式最终被当作什么类型判断？", opts: ["数字", "布尔值（True/False）", "字符串", "列表"], ans: 1 },
-  "1-2": { q: "range(3) 生成的数字序列是什么？", opts: ["1, 2, 3", "0, 1, 2", "0, 1, 2, 3", "1, 2"], ans: 1 },
-  "1-3": { q: "LeetCode 上标记为 Easy 的题目通常意味着？", opts: ["不需要写代码", "难度较低，适合初学者练习", "只有一行代码", "不需要调试"], ans: 1 },
-  "2-0": { q: "将一段代码封装成函数，最主要的好处是什么？", opts: ["代码运行更快", "提高复用性，便于维护和测试", "减少文件大小", "不需要写注释"], ans: 1 },
-  "2-1": { q: "Python 中用来遍历文件夹、处理文件路径的标准库是？", opts: ["json", "os / os.path", "sys", "math"], ans: 1 },
-  "2-2": { q: "git commit 命令的实际作用是什么？", opts: ["下载远程代码", "将暂存区修改保存到版本历史", "创建新分支", "删除文件"], ans: 1 },
-  "2-3": { q: "pip install requests 这条命令做了什么？", opts: ["运行一个 Python 脚本", "从 PyPI 下载并安装 requests 库", "创建虚拟环境", "卸载 Python"], ans: 1 },
-  "3-0": { q: "Flask 是一个什么样的框架？", opts: ["前端 UI 框架", "Python 的轻量级 Web 框架", "数据库管理工具", "操作系统"], ans: 1 },
-  "3-1": { q: "SQL 中用来查询数据的关键字是？", opts: ["INSERT", "DELETE", "SELECT", "UPDATE"], ans: 2 },
-  "3-2": { q: "CSS 中控制文字颜色的属性是？", opts: ["font-size", "background", "color", "margin"], ans: 2 },
-  "3-3": { q: "CRUD 四个字母中的 R 代表什么操作？", opts: ["Remove（删除）", "Read（读取）", "Rename（重命名）", "Restart（重启）"], ans: 1 },
-  "4-0": { q: "SSH 的全称是什么？", opts: ["Super Safe Host", "Secure Shell", "Simple Server Hub", "System Service Handler"], ans: 1 },
-  "4-1": { q: "Dockerfile 中指定基础镜像的指令是？", opts: ["RUN", "COPY", "FROM", "CMD"], ans: 2 },
-  "4-2": { q: "HTTPS 协议默认使用的端口号是？", opts: ["80", "8080", "443", "3000"], ans: 2 },
-  "4-3": { q: "JWT 的全称是什么？", opts: ["Java Web Token", "JSON Web Token", "Just Web Test", "JavaScript Window Type"], ans: 1 },
-  "5-0": { q: "单元测试一般测试的是什么粒度？", opts: ["整个系统端到端", "单个函数或方法的逻辑", "用户界面", "网络连接"], ans: 1 },
-  "5-1": { q: "CI/CD 中的 CI 指什么？", opts: ["Code Input", "Continuous Integration（持续集成）", "Complete Installation", "Client Interface"], ans: 1 },
-  "5-2": { q: "Redis 在项目中通常用来做什么？", opts: ["替代数据库", "缓存热点数据，提升读取速度", "发送邮件", "渲染 HTML"], ans: 1 },
-  "5-3": { q: "Code Review 最核心的价值是什么？", opts: ["找出所有 bug", "知识共享、提升团队代码质量", "批评别人的代码风格", "只是走个流程"], ans: 1 }
-};

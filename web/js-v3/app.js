@@ -3,7 +3,7 @@
  */
 
 // ---- 关卡完成/取消 ----
-function toggleTask(levelId, taskIdx) {
+function toggleTask(levelId, taskIdx, answer) {
   var key = levelId + '-' + taskIdx;
   if (USER.completedTasks.indexOf(key) >= 0) {
     // 取消
@@ -14,8 +14,8 @@ function toggleTask(levelId, taskIdx) {
       }
     });
   } else {
-    // 完成
-    return api.completeTask(levelId, taskIdx).then(function(res) {
+    // 完成（可携带验证答案）
+    return api.completeTask(levelId, taskIdx, answer).then(function(res) {
       if (applyServerResult(res)) {
         refreshModalTasks(levelId);
         refreshProgress();
@@ -159,29 +159,37 @@ function handleTaskClick(levelId, taskIdx) {
     return;
   }
   var taskText = LEVELS[levelId].tasks[taskIdx];
-  var checkKey = levelId + '-' + taskIdx;
-  var check = TASK_CHECKS[checkKey];
 
   document.getElementById('taskCheckTask').textContent = taskText;
   document.getElementById('taskCheckFeedback').style.display = 'none';
   document.getElementById('btnSubmitCheck').style.display = '';
 
-  if (check) {
-    document.getElementById('taskCheckQuestion').textContent = check.q;
-    document.getElementById('taskCheckQuestion').style.display = '';
-    var optsHtml = check.opts.map(function(o, i) {
-      return '<label class="task-check-opt"><input type="radio" name="taskCheck" value="' + i + '"><span>' + 'ABCD'[i] + '. ' + o + '</span></label>';
-    }).join('');
-    document.getElementById('taskCheckOpts').innerHTML = optsHtml;
-    document.getElementById('taskCheckOpts').style.display = '';
-  } else {
+  // 从后端获取验证题（如果有）
+  api.getTaskCheck(levelId, taskIdx).then(function(data) {
+    if (data && data.has_check) {
+      document.getElementById('taskCheckQuestion').textContent = data.question;
+      document.getElementById('taskCheckQuestion').style.display = '';
+      var optsHtml = data.options.map(function(o, i) {
+        return '<label class="task-check-opt"><input type="radio" name="taskCheck" value="' + i + '"><span>' + 'ABCD'[i] + '. ' + o + '</span></label>';
+      }).join('');
+      document.getElementById('taskCheckOpts').innerHTML = optsHtml;
+      document.getElementById('taskCheckOpts').style.display = '';
+      window._pendingTask = { levelId: levelId, taskIdx: taskIdx, hasCheck: true };
+    } else {
+      document.getElementById('taskCheckQuestion').style.display = 'none';
+      document.getElementById('taskCheckOpts').style.display = 'none';
+      document.getElementById('btnSubmitCheck').textContent = '我确实完成了';
+      window._pendingTask = { levelId: levelId, taskIdx: taskIdx, hasCheck: false };
+    }
+    document.getElementById('taskCheckOverlay').classList.add('open');
+  }).catch(function() {
+    // 后端不可用时回退：直接完成
     document.getElementById('taskCheckQuestion').style.display = 'none';
     document.getElementById('taskCheckOpts').style.display = 'none';
     document.getElementById('btnSubmitCheck').textContent = '我确实完成了';
-  }
-
-  window._pendingTask = { levelId: levelId, taskIdx: taskIdx, hasCheck: !!check };
-  document.getElementById('taskCheckOverlay').classList.add('open');
+    window._pendingTask = { levelId: levelId, taskIdx: taskIdx, hasCheck: false };
+    document.getElementById('taskCheckOverlay').classList.add('open');
+  });
 }
 
 function submitTaskCheck() {
@@ -192,20 +200,22 @@ function submitTaskCheck() {
     var sel = document.querySelector('input[name="taskCheck"]:checked');
     if (!sel) return;
     var answer = parseInt(sel.value);
-    var checkKey = t.levelId + '-' + t.taskIdx;
-    var check = TASK_CHECKS[checkKey];
-    if (answer === check.ans) {
-      toggleTask(t.levelId, t.taskIdx).then(function() {
+    // 直接调 API，后端会校验答案
+    api.completeTask(t.levelId, t.taskIdx, answer).then(function(res) {
+      if (res && res.detail) {
+        // 后端返回错误（如验证答案错误）
+        var fb = document.getElementById('taskCheckFeedback');
+        fb.textContent = '✕ ' + res.detail;
+        fb.style.display = 'block';
+        fb.style.color = 'var(--seal)';
+        return;
+      }
+      if (applyServerResult(res)) {
         refreshModalTasks(t.levelId);
         refreshProgress();
         closeTaskCheck();
-      });
-    } else {
-      var fb = document.getElementById('taskCheckFeedback');
-      fb.textContent = '✕ 答错了，回顾一下这个知识点再试';
-      fb.style.display = 'block';
-      fb.style.color = 'var(--seal)';
-    }
+      }
+    });
   } else {
     toggleTask(t.levelId, t.taskIdx).then(function() {
       refreshModalTasks(t.levelId);

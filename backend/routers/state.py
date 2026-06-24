@@ -1,7 +1,10 @@
 """
 计算机修行录 - 状态路由（只读启动同步 + 个人资料更新）
 """
-from fastapi import APIRouter, Request
+import base64
+import re
+
+from fastapi import APIRouter, HTTPException, Request
 
 from models import StateOut, ProfileUpdateIn, row_to_dict, user_row_to_dict, now_iso
 from database import get_db
@@ -9,6 +12,11 @@ from middleware import get_user_id
 from services.stats import calc_stats, calc_progress
 
 router = APIRouter(prefix="/api", tags=["state"])
+
+# 头像最大原始尺寸：256KB（base64 解码后）
+AVATAR_MAX_RAW_BYTES = 256 * 1024
+# 允许的头像 MIME 类型
+AVATAR_ALLOWED_TYPES = {"image/png", "image/jpeg", "image/webp"}
 
 
 @router.get("/state", response_model=StateOut)
@@ -63,6 +71,7 @@ def update_profile(body: ProfileUpdateIn, request: Request):
     if body.name is not None:
         updates["name"] = body.name
     if body.avatar is not None:
+        _validate_avatar(body.avatar)
         updates["avatar"] = body.avatar
     if body.title is not None:
         updates["title"] = body.title
@@ -86,3 +95,41 @@ def update_profile(body: ProfileUpdateIn, request: Request):
         user = conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
 
     return {"ok": True, "user": user_row_to_dict(user)}
+
+
+def _validate_avatar(avatar: str):
+    """校验头像：空字符串表示删除，否则必须是有效的 data URI 且尺寸合规。"""
+    if not avatar or not avatar.strip():
+        return  # 允许清空头像
+
+    # 必须是 data URI 格式
+    if not avatar.startswith("data:"):
+        raise HTTPException(400, "头像格式无效，需要 data URI")
+
+    # 提取 MIME 类型
+    mime_match = re.match(r"data:([^;]+);base64,", avatar)
+    if not mime_match:
+        raise HTTPException(400, "头像格式无效，需要 base64 编码")
+
+    mime_type = mime_match.group(1)
+    if mime_type not in AVATAR_ALLOWED_TYPES:
+        raise HTTPException(
+            400,
+            f"不支持的图片格式：{mime_type}，仅支持 PNG、JPEG、WebP",
+        )
+
+    # 解码并校验大小
+    try:
+        b64_data = avatar.split(",", 1)[1]
+        raw_bytes = base64.b64decode(b64_data, validate=True)
+    except Exception:
+        raise HTTPException(400, "头像 base64 解码失败")
+
+    if len(raw_bytes) > AVATAR_MAX_RAW_BYTES:
+        raise HTTPException(
+            400,
+            f"头像文件过大（{len(raw_bytes)} bytes），最大允许 {AVATAR_MAX_RAW_BYTES} bytes",
+        )
+
+    if len(raw_bytes) == 0:
+        raise HTTPException(400, "头像数据为空")

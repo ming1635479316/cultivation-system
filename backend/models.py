@@ -22,22 +22,23 @@ class LoginIn(BaseModel):
 
 
 class MessageIn(BaseModel):
-    icon: str = ""
-    text: str
+    icon: str = Field(default="", max_length=64)
+    text: str = Field(min_length=1, max_length=5000)
     time: str | None = None
     unread: bool = True
     pinned: bool = False
 
 
 class JournalIn(BaseModel):
-    title: str
-    body: str
+    title: str = Field(min_length=1, max_length=200)
+    body: str = Field(min_length=1, max_length=20000)
     date: str | None = None
 
 
 class TaskAction(BaseModel):
     level_id: int = Field(..., ge=0, le=9)
     task_idx: int = Field(..., ge=0)
+    answer: int | None = None  # 关卡验证题答案（无验证题时可为空）
 
 
 class QuizSubmitIn(BaseModel):
@@ -47,12 +48,12 @@ class QuizSubmitIn(BaseModel):
 
 
 class ProfileUpdateIn(BaseModel):
-    name: str | None = None
-    avatar: str | None = None
-    title: str | None = None
-    gender: str | None = None
-    age: str | None = None
-    contact: str | None = None
+    name: str | None = Field(default=None, max_length=64)
+    avatar: str | None = Field(default=None, max_length=350000)  # base64, ~250KB 原始图片
+    title: str | None = Field(default=None, max_length=64)
+    gender: str | None = Field(default=None, max_length=16)
+    age: str | None = Field(default=None, max_length=16)
+    contact: str | None = Field(default=None, max_length=128)
 
 
 # ---- 响应模型 ----

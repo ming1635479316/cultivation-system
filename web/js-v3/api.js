@@ -66,11 +66,18 @@ var api = {
   },
 
   // ---- 任务 ----
-  completeTask: function(levelId, taskIdx) {
+  getTaskCheck: function(levelId, taskIdx) {
+    return apiFetch(API_BASE + '/api/tasks/check/' + levelId + '/' + taskIdx)
+      .then(function(r) { return r.json(); });
+  },
+
+  completeTask: function(levelId, taskIdx, answer) {
+    var body = { level_id: levelId, task_idx: taskIdx };
+    if (answer !== undefined && answer !== null) body.answer = answer;
     return apiFetch(API_BASE + '/api/tasks/complete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ level_id: levelId, task_idx: taskIdx })
+      body: JSON.stringify(body)
     }).then(function(r) { return r.json(); });
   },
 

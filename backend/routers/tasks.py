@@ -11,19 +11,38 @@ from database import get_db
 from middleware import get_user_id
 from services.stats import calc_stats, calc_progress
 from services.events import record_event
+from services.quiz import get_task_check, verify_task_answer
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 
 
+@router.get("/check/{level_id}/{task_idx}")
+def get_check(level_id: int, task_idx: int, request: Request):
+    """获取关卡验证题（不带答案），供前端弹出验证弹窗。"""
+    get_user_id(request)  # 仅鉴权
+    check = get_task_check(level_id, task_idx)
+    if check:
+        return {"has_check": True, "question": check["question"], "options": check["options"]}
+    return {"has_check": False, "question": None, "options": None}
+
+
 @router.post("/complete")
 def complete_task(action: TaskAction, request: Request):
-    """完成关卡任务。后端校验并记录，返回更新后的 stats/progress。"""
+    """完成关卡任务。后端校验验证题答案并记录，返回更新后的 stats/progress。"""
     uid = get_user_id(request)
     key = f"{action.level_id}-{action.task_idx}"
 
     total = LEVEL_TASKS.get(action.level_id)
     if total is None or action.task_idx < 0 or action.task_idx >= total:
         raise HTTPException(400, "任务不存在")
+
+    # 验证关卡答案（如果有验证题）
+    check = get_task_check(action.level_id, action.task_idx)
+    if check is not None:
+        if action.answer is None:
+            raise HTTPException(400, "此关卡需要先通过验证")
+        if not verify_task_answer(action.level_id, action.task_idx, action.answer):
+            raise HTTPException(400, "验证答案错误，请回顾知识点后重试")
 
     with get_db() as conn:
         user = conn.execute("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
