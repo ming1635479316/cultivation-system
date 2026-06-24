@@ -57,7 +57,6 @@
 | # | 问题 | 影响 | 建议 |
 |---|------|------|------|
 | #29 | 静态文件挂载到根路径 | `StaticFiles` 在路由注册之后挂载，可能与未来新路由冲突 | 保持当前顺序或改用 `/static` 前缀 |
-| #32 | 残留 Railway 部署文件 | `Procfile`/`railway.json` 未清理 | 删除无用文件 |
 | #33 | 无自动化测试 | 每次改代码只能手工验证 | 为核心逻辑（stats、quiz、auth）加 pytest |
 | #34 | 私信用 5 秒轮询 | 移动端耗电，后台 tab 也继续请求 | 改用 SSE 推送，或 `visibilitychange` 暂停轮询 |
 | #35 | `GET /api/state` 无分页 | 积累数月数据后首次加载慢 | events 限制最近 N 条，messages/journals 加页参数 |
