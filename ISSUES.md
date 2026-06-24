@@ -1,70 +1,54 @@
 # 修炼体系 · 问题清单
 
-> 记录后端、前端、数据库、部署等方面的设计问题与修复记录。
-> 由 AI 助手（易）整理维护。
->
-> 当前版本：**v3.2** | 最后更新：2026-06-24
+> v3.2 · 最后更新：2026-06-24
 
 ---
 
-## 修复记录总览
+## 待处理
+
+### P1 — 安全 / 数据完整性
+
+| # | 问题 | 位置 | 建议 |
+|---|------|------|------|
+| P1-7 | 账号删除未级联清理社交数据 | `auth.py:86` 只删了 events/messages/journals/tokens，posts/comments/votes/dms 残留 | 补全级联删除 |
+| P1-5 | 注册缺少限流 | `auth.py:18` register 无限流，可批量注册灌库 | 加 IP 频率限制 |
+
+### P2 — 功能缺陷 / 性能
+
+| # | 问题 | 位置 | 建议 |
+|---|------|------|------|
+| P2-1 | 排行榜 N+1 查询 | `leaderboard.py` 每个用户单独查 events | 预计算 stats 表 |
+| P2-9 | `formatTime` 解析 UTC 时间戳失败 | `social.js:7` 对 `+00:00` 结尾的 ISO 串错误追加 `Z` | 修正时区解析逻辑 |
+| P2-10 | DB 默认时间戳用本地时间 | `database.py` 所有 `DEFAULT datetime('now')` | 改为 `now_iso()` 显式写入 |
+| P2-11 | journal_write 事件从未触发 | `journals.py` 写感悟没调 `record_event`，配置定义了奖励但没用 | `add_journal` 中补上 |
+| P2-12 | 消息/感悟渲染未转义（XSS） | `profile.html:281` journal.body / `messages.html:69` msg.text 直接插 innerHTML | 加 `escapeHtml()` |
+
+### P3 — 代码质量
+
+| # | 问题 | 位置 | 建议 |
+|---|------|------|------|
+| P3-1 | `LoginIn` 字段无长度校验 | `models.py:19-21` | 加 min_length |
+| P3-2 | `grade_submission` 死代码 | `services/quiz.py:146-155` | 删除 |
+| P3-3 | `get_questions_with_answers` 死代码 | `services/quiz.py:158-183` | 删除 |
+| P3-4 | profile 页 title 字段不暴露 | `profile.html` 表单缺 title | 加编辑项 |
+| P3-5 | README 目录树 `requirements.txt` 路径写错 | 实际在 `backend/` 下 | 修正 |
+| P3-6 | `backend/app.py` 孤儿文件 | 未被 import | 确认后可删 |
+| P3-7 | `requirements.txt` 含未用的 `psycopg2-binary` | 项目用 SQLite | 删 |
+| P3-8 | `VoteIn` 可用 Pydantic Literal 校验 | `models.py:116-119` 手写校验 | 改用 Literal |
+| P3-9 | 排行榜同分排名不共享 | `leaderboard.py:44` | 密集排名 |
+| P3-10 | favicon 部分页面缺失 | login/profile/messages.html | 统一 |
+
+---
+
+## 已修复（按版本）
 
 ### v3.2（2026-06-24）
-
-| # | 类型 | 修复内容 |
-|---|------|---------|
-| P1-1 | 安全 | 关卡验证题从前端迁移到后端（`services/quiz.py`），服务端校验答案 |
-| P1-2 | 安全 | `MessageIn`/`JournalIn` 添加输入长度限制 |
-| P1-3 | 安全 | 头像服务端校验：MIME 类型、base64 解码、尺寸上限 |
+- 关卡验证后端化（P1-1）、输入长度限制（P1-2）、头像校验（P1-3）
+- 生产环境关闭 /docs（SHOW_DOCS 控制）
+- admin 迁移密码不再输出日志
 
 ### v3.1（2026-06-23）
-
-| # | 类型 | 修复内容 |
-|---|------|---------|
-| #9 | 数据 | 前端时间戳统一 UTC（`toISOString()`） |
-| #15 | 数据库 | SQLite 启用 WAL 模式 + busy_timeout=5000 + timeout=10 |
-| #17 | 数据库 | JSON 字段序列化辅助函数（`json_dumps`/`json_loads`） |
-| #18 | 数据库 | 用户删除手动级联清理 |
-| #19 | 数据库 | 启动时清理过期 token |
-| #20 | 运维 | admin 密码改为 `ADMIN_PASSWORD` 环境变量或随机生成 |
-| #26 | 运维 | 结构化 JSON 日志模块 + 请求日志中间件 |
-| #28 | 安全 | API 全局限流（120 req/min/IP 滑动窗口） |
+- WAL 模式、JSON 序列化、用户级联删除（基础表）、UTC now_iso()、结构化日志、API 限流、admin 密码环境变量
 
 ### v3.0（2026-06-23）
-
-| # | 类型 | 修复内容 |
-|---|------|---------|
-| #1 | 安全 | bcrypt 密码哈希，旧 SHA256 登录时自动升级 |
-| #2 | 安全 | Token 加 7 天过期 + 启动清理 |
-| #3 | 安全 | 登录防爆破（5 次/5 分钟/IP） |
-| #4 | 安全 | CORS 限制为 localhost 来源（可通过 `CORS_ORIGINS` 环境变量配置） |
-| #5 | 安全 | 后端校验事件类型白名单、段位规则、任务边界 |
-| #6~#8 | 数据 | POST /api/state 废弃，改为增量 API，后端为唯一数据源 |
-| #10 | 数据 | 增量 API 使用后端自增 ID |
-| #11~#14 | 业务 | 段位/属性/任务/考核全上后端 |
-| #16 | 数据库 | user_id / created_at 等常用字段加索引 |
-| #21~#24 | 算法 | 抽题 Fisher-Yates、任务不可重复完成、消息 ID 后端生成、考核答案不上前端 |
-| #25 | 扩展 | 消息/感悟 GET 端点分页 |
-| #27 | 运维 | `/api/health` 健康检查端点 |
-| #30~#31 | 运维 | 本地数据库迁移到多用户结构 |
-
----
-
-## 待处理问题
-
-### P2
-
-| # | 问题 | 影响 | 建议 |
-|---|------|------|------|
-| #33 | 无自动化测试 | 每次改代码只能手工验证 | 为核心逻辑（stats、quiz、auth）加 pytest |
-| #34 | 私信用 5 秒轮询 | 移动端耗电，后台 tab 也继续请求 | 改用 SSE 推送，或 `visibilitychange` 暂停轮询 |
-| #35 | `GET /api/state` 无分页 | 积累数月数据后首次加载慢 | events 限制最近 N 条，messages/journals 加页参数 |
-| #37 | 限流数据纯内存 | 服务重启后计数清零 | 影响不大，必要时换 SQLite 内存表 |
-| #38 | 时间戳不一致 | SQLite DEFAULT `datetime('now')` 是本地时间，`now_iso()` 是 UTC | 统一为 UTC |
-
----
-
-## 备注
-
-- 适合个人/小范围使用。正式对外推广前建议加测试覆盖（#33）。
-- 用户量大后考虑 SQLite → PostgreSQL 迁移。
+- bcrypt、Token 过期、CORS、事件校验、增量 API、后端计算 stats/progress、分页、健康检查、多用户迁移
