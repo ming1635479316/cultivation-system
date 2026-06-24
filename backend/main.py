@@ -27,7 +27,16 @@ async def lifespan(app: FastAPI):
     logger.info("应用关闭", extra={"extra_data": {"version": "3.0.0"}})
 
 
-app = FastAPI(title="计算机修行录 API", version="3.0.0", lifespan=lifespan)
+# 生产环境关闭 API 文档（通过环境变量 SHOW_DOCS=true 可开启）
+_SHOW_DOCS = os.environ.get("SHOW_DOCS", "").lower() == "true"
+app = FastAPI(
+    title="计算机修行录 API",
+    version="3.0.0",
+    lifespan=lifespan,
+    docs_url="/docs" if _SHOW_DOCS else None,
+    redoc_url=None,
+    openapi_url="/openapi.json" if _SHOW_DOCS else None,
+)
 
 # CORS
 app.add_middleware(

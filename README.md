@@ -107,8 +107,10 @@ cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-python main.py             # 开发模式（reload），访问 http://127.0.0.1:8001
+SHOW_DOCS=true python main.py    # 开发模式（reload + API 文档），访问 http://127.0.0.1:8001
 ```
+
+> 生产环境不设置 `SHOW_DOCS`，`/docs` 和 `/openapi.json` 自动关闭。本地开发设置 `SHOW_DOCS=true` 开启。
 
 ## 版本历史
 
