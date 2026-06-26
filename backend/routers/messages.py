@@ -37,6 +37,14 @@ def add_message(msg: MessageIn, request: Request):
     return row_to_dict(row)
 
 
+@router.put("/read-all")
+def mark_all_read(request: Request):
+    uid = get_user_id(request)
+    with get_db() as conn:
+        conn.execute("UPDATE messages SET unread=0 WHERE user_id=? AND unread=1", (uid,))
+    return {"ok": True}
+
+
 @router.put("/{msg_id}")
 def update_message(msg_id: int, msg: MessageIn, request: Request):
     uid = get_user_id(request)
@@ -56,12 +64,4 @@ def delete_message(msg_id: int, request: Request):
     uid = get_user_id(request)
     with get_db() as conn:
         conn.execute("DELETE FROM messages WHERE id=? AND user_id=?", (msg_id, uid))
-    return {"ok": True}
-
-
-@router.put("/read-all")
-def mark_all_read(request: Request):
-    uid = get_user_id(request)
-    with get_db() as conn:
-        conn.execute("UPDATE messages SET unread=0 WHERE user_id=? AND unread=1", (uid,))
     return {"ok": True}

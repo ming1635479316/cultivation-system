@@ -6,7 +6,7 @@ import sqlite3
 from datetime import datetime, timezone
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 # ---- 请求模型 ----
@@ -33,6 +33,17 @@ class JournalIn(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     body: str = Field(min_length=1, max_length=20000)
     date: str | None = None
+
+    @field_validator("date")
+    @classmethod
+    def validate_date(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        try:
+            datetime.fromisoformat(v)
+        except ValueError:
+            raise ValueError(f"日期格式无效：{v}，请使用 ISO 8601 格式（如 2026-06-15 或 2026-06-15T10:30:00）")
+        return v
 
 
 class TaskAction(BaseModel):

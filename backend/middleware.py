@@ -36,6 +36,23 @@ def check_login_rate_limit(client_ip: str):
     _LOGIN_ATTEMPTS[client_ip] = attempts
 
 
+# 注册限流（独立于登录限流）
+_REGISTER_ATTEMPTS: dict[str, list[datetime]] = {}
+_REGISTER_LIMIT = 3      # 每 IP 每小时最多注册次数
+_REGISTER_WINDOW_H = 1   # 注册限流窗口（小时）
+
+
+def check_register_rate_limit(client_ip: str):
+    """1 小时内同一 IP 最多 _REGISTER_LIMIT 次注册。"""
+    now = datetime.now(timezone.utc)
+    attempts = _REGISTER_ATTEMPTS.get(client_ip, [])
+    attempts = [t for t in attempts if now - t < timedelta(hours=_REGISTER_WINDOW_H)]
+    if len(attempts) >= _REGISTER_LIMIT:
+        raise HTTPException(429, "注册过于频繁，请 1 小时后再试")
+    attempts.append(now)
+    _REGISTER_ATTEMPTS[client_ip] = attempts
+
+
 def check_api_rate_limit(client_ip: str):
     """滑动窗口限流：每分钟每 IP 最多 _RATE_LIMIT 次请求。"""
     now = datetime.now(timezone.utc)

@@ -360,7 +360,21 @@ function submitQuiz() {
     if (data.level_up && data.new_level) {
       USER.level = data.new_level;
       cacheSave();
-      showBreakthroughEffect(LEVELS[data.new_level]);
+      // 生成突破消息
+      var newLevel = LEVELS[data.new_level];
+      api.addMessage({
+        icon: '⚡',
+        text: '突破！你已晋升为「' + newLevel.name + '」',
+        time: new Date().toISOString(),
+        unread: true
+      }).then(function(res) {
+        if (res && res.id) {
+          MESSAGES.unshift(res);
+          cacheSave();
+          if (typeof updateMsgBadge === 'function') updateMsgBadge();
+        }
+      }).catch(function() {});
+      showBreakthroughEffect(newLevel);
       refreshProgress();
       renderLevelList();
     }
@@ -382,15 +396,7 @@ function showBreakthroughEffect(level) {
 
 // ---- 资源点击 ----
 function recordResourceRead(levelId, resIdx) {
-  var level = LEVELS[levelId];
-  if (!level || !level.resources || !level.resources[resIdx]) return;
-  // 通过后端记录
-  api.addMessage({
-    icon: '📖',
-    text: '阅读了修炼资源：' + level.resources[resIdx].name,
-    time: new Date().toISOString(),
-    unread: true
-  }).catch(function() {});
+  // 阅读资源不产生消息，仅浏览器端跳转
 }
 
 // ---- 登出 ----

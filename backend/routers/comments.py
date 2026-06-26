@@ -87,7 +87,7 @@ def create_comment(post_id: int, body: CommentIn, request: Request):
         record_event(conn, uid, "comment_create", value={"theory": 1}, ref=f"comment_{comment_id}")
 
         row = conn.execute("SELECT * FROM comments WHERE id=?", (comment_id,)).fetchone()
-    return {"comment": _comment_with_author(conn, row)}
+        return {"comment": _comment_with_author(conn, row)}
 
 
 @router.delete("/{comment_id}")

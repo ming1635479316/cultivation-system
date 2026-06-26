@@ -9,13 +9,14 @@ from fastapi import APIRouter, HTTPException, Request
 
 from models import RegisterIn, LoginIn, AuthOut, user_row_to_dict
 from database import get_db, cleanup_expired_tokens
-from middleware import hash_password, verify_password, check_login_rate_limit, _get_client_ip, get_user_id
+from middleware import hash_password, verify_password, check_login_rate_limit, check_register_rate_limit, _get_client_ip, get_user_id
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=AuthOut)
-def register(body: RegisterIn):
+def register(body: RegisterIn, request: Request):
+    check_register_rate_limit(_get_client_ip(request))
     with get_db() as conn:
         exists = conn.execute(
             "SELECT id FROM users WHERE username=?", (body.username,)
@@ -83,6 +84,14 @@ def delete_account(request: Request):
     uid = get_user_id(request)
     with get_db() as conn:
         # 手动级联删除（SQLite 不支持 ALTER TABLE 添加 CASCADE）
+        # 注意顺序：先删引用 posts 的 comments，再删 posts
+        for table in ["comments", "votes"]:
+            conn.execute(f"DELETE FROM {table} WHERE user_id=?", (uid,))
+        conn.execute("DELETE FROM posts WHERE user_id=?", (uid,))
+        conn.execute(
+            "DELETE FROM direct_messages WHERE from_user_id=? OR to_user_id=?",
+            (uid, uid),
+        )
         for table in ["events", "messages", "journals", "tokens"]:
             conn.execute(f"DELETE FROM {table} WHERE user_id=?", (uid,))
         conn.execute("DELETE FROM users WHERE id=?", (uid,))
