@@ -14,13 +14,14 @@
 
 <nav class="navbar">
   <div class="logo"><span class="logo-dot"></span>修炼录</div>
-  <div class="nav-links">
-    <a href="index.html">主页</a>
-    <a href="community.html">社区</a>
-    <a href="leaderboard.html">排行</a>
-    <a href="dms.html">私信</a>
-    <a href="profile.html">我的</a>
-    <a href="#" onclick="logout();return false" style="color:var(--text-muted);font-size:12px;margin-left:8px;">退出</a>
+    <div class="nav-links">
+      <a href="index.html">主页</a>
+      <a href="community.html">社区</a>
+      <a href="leaderboard.html">排行</a>
+      <a href="dms.html">私信</a>
+      <a href="messages.html" class="nav-badge" id="navMsgLink">消息</a>
+      <a href="profile.html">我的</a>
+      <span class="nav-settings" onclick="openSettings()" title="设置">⚙</span>
   </div>
 </nav>
 
@@ -32,6 +33,7 @@
 <script src="js-v3/constants.js"></script>
 <script src="js-v3/store.js"></script>
 <script src="js-v3/social.js"></script>
+  <script src="js-v3/nav.js"></script>
 <script>
 var userId = parseInt(new URLSearchParams(location.search).get('id'));
 

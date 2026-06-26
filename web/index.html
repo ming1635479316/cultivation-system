@@ -17,9 +17,9 @@
       <a href="community.html">社区</a>
       <a href="leaderboard.html">排行</a>
       <a href="dms.html">私信</a>
+      <a href="messages.html" class="nav-badge" id="navMsgLink">消息</a>
       <a href="profile.html">我的</a>
-      
-      <a href="#" onclick="logout();return false" style="color:var(--text-muted);font-size:12px;margin-left:8px;">退出</a>
+      <span class="nav-settings" onclick="openSettings()" title="设置">⚙</span>
     </div>
   </nav>
 
@@ -103,6 +103,7 @@
   <script src="js-v3/constants.js"></script>
   <script src="js-v3/store.js"></script>
   <script src="js-v3/app.js"></script>
+  <script src="js-v3/nav.js"></script>
   <script>
     // 页面初始化：先同步服务端数据，再渲染
     initStore(function() {

@@ -13,16 +13,16 @@
 
   <nav class="navbar">
     <div class="logo"><span class="logo-dot"></span>修炼录</div>
-    <div class="nav-links">
+      <div class="nav-links">
       <a href="index.html">主页</a>
       <a href="community.html">社区</a>
       <a href="leaderboard.html">排行</a>
       <a href="dms.html">私信</a>
+      <a href="messages.html" class="nav-badge active" id="navMsgLink">消息</a>
       <a href="profile.html">我的</a>
-      <a href="messages.html" class="active">消息</a>
-      <a href="#" onclick="logout();return false" style="color:var(--text-muted);font-size:12px;margin-left:8px;">退出</a>
-    </div>
-  </nav>
+      <span class="nav-settings" onclick="openSettings()" title="设置">⚙</span>
+  </div>
+</nav>
 
   <div class="container">
     <h2 class="page-title">消息</h2>
@@ -48,6 +48,7 @@
 
   <script src="js-v3/api.js"></script>
   <script src="js-v3/store.js"></script>
+  <script src="js-v3/nav.js"></script>
   <script>
     (function() {
       function $_(id) { return document.getElementById(id); }
