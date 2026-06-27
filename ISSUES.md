@@ -1,6 +1,6 @@
 # 修炼体系 · 问题清单
 
-> v3.2 · 最后更新：2026-06-24
+> v3.4 · 最后更新：2026-06-27
 
 ---
 
@@ -10,8 +10,8 @@
 
 | # | 问题 | 位置 | 建议 |
 |---|------|------|------|
-| P1-7 | 账号删除未级联清理社交数据 | `auth.py:86` 只删了 events/messages/journals/tokens，posts/comments/votes/dms 残留 | 补全级联删除 |
-| P1-5 | 注册缺少限流 | `auth.py:18` register 无限流，可批量注册灌库 | 加 IP 频率限制 |
+| P1-7 | ~~账号删除未级联清理社交数据~~ | ✅ **已修复 v3.4** — 已补全 posts/comments/votes/dms 级联删除 | |
+| P1-5 | ~~注册缺少限流~~ | ✅ **已修复 v3.4** — middleware.py 已有 check_register_rate_limit | |
 
 ### P2 — 功能缺陷 / 性能
 
@@ -41,6 +41,14 @@
 ---
 
 ## 已修复（按版本）
+
+### v3.4（2026-06-27）
+- 密码修改 API（POST /api/auth/change-password）+ 限流
+- 安全审计系统（audit_events 表，独立于用户可见 events）
+- 审计记录：login_success/failure、register、password_change、account_delete
+- 账号删除补全级联（posts/comments/votes/dms）
+- 服务器加固：fail2ban、SSH仅密钥登录、DB权限600、每日备份
+- 测试账号清理（test123、bot_test、sec_test 等5个）
 
 ### v3.2（2026-06-24）
 - 关卡验证后端化（P1-1）、输入长度限制（P1-2）、头像校验（P1-3）
