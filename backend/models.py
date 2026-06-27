@@ -21,6 +21,11 @@ class LoginIn(BaseModel):
     password: str
 
 
+class PasswordChangeIn(BaseModel):
+    old_password: str
+    new_password: str = Field(min_length=4, max_length=64)
+
+
 class MessageIn(BaseModel):
     icon: str = Field(default="", max_length=64)
     text: str = Field(min_length=1, max_length=5000)

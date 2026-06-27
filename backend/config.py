@@ -17,6 +17,15 @@ VALID_EVENT_TYPES = {
     "journal_write", "post_create", "comment_create"
 }
 
+# 安全审计事件类型（与用户可见 events 表隔离，永不过期清理）
+VALID_AUDIT_EVENT_TYPES = {
+    "login_success",
+    "login_failure",
+    "register",
+    "password_change",
+    "account_delete",
+}
+
 # 每个段位的任务数量（与前端 data.js 保持一致）
 LEVEL_TASKS = {
     0: 0, 1: 4, 2: 4, 3: 4, 4: 4, 5: 4, 6: 4, 7: 3, 8: 2, 9: 0,

@@ -53,6 +53,23 @@ def check_register_rate_limit(client_ip: str):
     _REGISTER_ATTEMPTS[client_ip] = attempts
 
 
+# 密码修改限流（独立于登录限流）
+_PASSWORD_CHANGE_ATTEMPTS: dict[str, list[datetime]] = {}
+_PASSWORD_CHANGE_LIMIT = 3      # 每 IP 每小时最多修改密码次数
+_PASSWORD_CHANGE_WINDOW_H = 1   # 密码修改限流窗口（小时）
+
+
+def check_password_change_rate_limit(client_ip: str):
+    """1 小时内同一 IP 最多 _PASSWORD_CHANGE_LIMIT 次密码修改。"""
+    now = datetime.now(timezone.utc)
+    attempts = _PASSWORD_CHANGE_ATTEMPTS.get(client_ip, [])
+    attempts = [t for t in attempts if now - t < timedelta(hours=_PASSWORD_CHANGE_WINDOW_H)]
+    if len(attempts) >= _PASSWORD_CHANGE_LIMIT:
+        raise HTTPException(429, "密码修改过于频繁，请 1 小时后再试")
+    attempts.append(now)
+    _PASSWORD_CHANGE_ATTEMPTS[client_ip] = attempts
+
+
 def check_api_rate_limit(client_ip: str):
     """滑动窗口限流：每分钟每 IP 最多 _RATE_LIMIT 次请求。"""
     now = datetime.now(timezone.utc)

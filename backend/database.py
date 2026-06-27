@@ -184,6 +184,19 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_votes_target ON votes(target_type, target_id);
             CREATE INDEX IF NOT EXISTS idx_dm_from_to ON direct_messages(from_user_id, to_user_id);
             CREATE INDEX IF NOT EXISTS idx_dm_to_read ON direct_messages(to_user_id, is_read);
+
+            CREATE TABLE IF NOT EXISTS audit_events (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id     INTEGER,
+                event_type  TEXT    NOT NULL,
+                ip          TEXT    DEFAULT '',
+                detail      TEXT,
+                created_at  TEXT    DEFAULT (datetime('now'))
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_events(user_id);
+            CREATE INDEX IF NOT EXISTS idx_audit_type ON audit_events(event_type);
+            CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_events(created_at);
         """)
 
         # 给旧 events 表添加 ref 字段
