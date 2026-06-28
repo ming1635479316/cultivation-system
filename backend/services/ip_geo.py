@@ -1,27 +1,24 @@
 """
 计算机修行录 - IP 属地解析服务
-使用 ip-api.com 免费 API，内存缓存。
+ip-api.com 为主（服务器实测可访问），太平洋IP为备用，内存缓存。
 """
 import ipaddress
-from typing import Optional
 
 import requests
 
-# 内存缓存：{ip_str: province_str}
 _cache: dict[str, str] = {}
 
 
 def _is_private_ip(ip: str) -> bool:
-    """判断是否为内网/本地 IP。"""
     try:
         addr = ipaddress.ip_address(ip)
         return addr.is_private or addr.is_loopback or addr.is_link_local
     except ValueError:
-        return True  # 非法 IP 也当作本地处理
+        return True
 
 
 def get_ip_province(ip: str) -> str:
-    """根据 IP 获取省份（如"广东省"），失败返回空字符串。"""
+    """根据 IP 获取属地，失败返回空字符串。"""
     if not ip or ip == "unknown":
         return ""
 
@@ -32,28 +29,57 @@ def get_ip_province(ip: str) -> str:
         _cache[ip] = "本地"
         return "本地"
 
+    # 先试 ip-api.com（服务器实测可用）
+    result = _try_ipapi(ip)
+    if not result:
+        # 备用：太平洋IP（国内服务）
+        result = _try_pconline(ip)
+
+    _cache[ip] = result
+    return result
+
+
+def _try_ipapi(ip: str) -> str:
     try:
         resp = requests.get(
             f"http://ip-api.com/json/{ip}",
-            params={"fields": "country,regionName", "lang": "zh-CN"},
-            timeout=3,
+            params={"fields": "country,regionName,city"},
+            timeout=5,
         )
         if resp.status_code == 200:
             data = resp.json()
             if data.get("status") != "fail":
                 region = data.get("regionName", "")
+                city = data.get("city", "")
                 country = data.get("country", "")
-                if region:
-                    # 直辖市 regionName 就是城市名，返回即可
-                    result = region
-                elif country:
-                    result = country
+                # 国内IP优先显示城市，国外显示国家
+                if country == "China":
+                    if city:
+                        return city
+                    return region or "中国"
                 else:
-                    result = ""
-                _cache[ip] = result
-                return result
-    except (requests.RequestException, ValueError):
+                    if region:
+                        return region
+                    return country
+    except Exception:
         pass
+    return ""
 
-    _cache[ip] = ""
+
+def _try_pconline(ip: str) -> str:
+    try:
+        resp = requests.get(
+            "https://whois.pconline.com.cn/ipJson.jsp",
+            params={"ip": ip, "json": "true"},
+            timeout=5,
+        )
+        if resp.status_code == 200:
+            resp.encoding = "utf-8"
+            data = resp.json()
+            pro = data.get("pro", "")
+            city = data.get("city", "")
+            if pro:
+                return pro + (" " + city if city and city != pro else "")
+    except Exception:
+        pass
     return ""
