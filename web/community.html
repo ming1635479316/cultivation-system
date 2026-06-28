@@ -112,6 +112,9 @@ function loadPosts(sort, page, append) {
     bindDeleteEvents(document.getElementById('postList'), function() {
       loadPosts(currentSort, 1);
     });
+    bindHideEvents(document.getElementById('postList'), function() {
+      loadPosts(currentSort, 1);
+    });
   }).catch(function() {
     document.getElementById('postList').innerHTML = '<p style="color:var(--seal);text-align:center;padding:40px;">加载失败，请检查网络后刷新</p>';
   });
@@ -125,16 +128,20 @@ function renderPostCard(p) {
   return '<div class="post-card" onclick="location.href=\'post.html?id=' + p.id + '\'">'
     + '<div class="post-card-header">'
     + renderAuthor(p.author)
-    + '<span class="post-time">' + formatTime(p.created_at) + '</span>'
+    + '<div class="post-card-meta-right">'
     + renderDeleteBtn('post', p.id, authorId)
+    + renderHideBtn(p.id, authorId, p.is_hidden === 1)
+    + '<span class="post-time">' + formatTime(p.created_at, true) + '</span>'
     + '</div>'
-    + '<h3 class="post-card-title">' + escapeHtml(p.title) + '</h3>'
+    + '</div>'
+    + '<h3 class="post-card-title">' + escapeHtml(p.title) + (p.is_hidden === 1 ? ' <span class="post-hidden-badge">[已隐藏]</span>' : '') + '</h3>'
     + '<p class="post-card-preview">' + escapeHtml((p.content || '').substring(0, 200)) + '</p>'
     + '<div class="post-card-footer">'
     + '<span class="post-type-badge ' + typeCls + '">' + typeLabel + '</span>'
     + renderTags(tags)
     + renderVoteButtons('post', p.id, p.vote_score, p.user_vote || 0)
     + '<span class="post-comment-count">💬 ' + (p.comment_count || 0) + '</span>'
+    + renderIpProvince(p.ip_province)
     + '</div></div>';
 }
 

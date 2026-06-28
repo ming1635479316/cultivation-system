@@ -1134,6 +1134,24 @@ a:hover { opacity: 0.8; }
 .post-time { font-size: 11px; color: var(--text-muted); }
 .post-comment-count { color: var(--text-dim); font-size: 12px; }
 
+/* --- IP属地 --- */
+.ip-province { font-size: 11px; color: var(--text-muted); margin-left: 4px; }
+.ip-province::before { content: '📍'; margin-right: 1px; }
+
+/* --- 帖子卡片右侧 meta --- */
+.post-card-meta-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+/* --- 隐藏按钮 --- */
+.btn-hide-mini {
+  background: none; border: none; cursor: pointer;
+  font-size: 13px; padding: 1px 2px; color: var(--text-muted);
+  border-radius: 3px; line-height: 1;
+}
+.btn-hide-mini:hover { background: var(--bg-hover); }
+
+/* --- 隐藏状态标记 --- */
+.post-hidden-badge { font-size: 11px; color: var(--seal); font-weight: 400; }
+
 /* --- 投票按钮 --- */
 .vote-group { display: inline-flex; align-items: center; gap: 2px; }
 .vote-btn {

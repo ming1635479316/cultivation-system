@@ -191,6 +191,18 @@ var api = {
     return apiFetch(API_BASE + '/api/posts/' + postId, { method: 'DELETE' })
       .then(function(r) { return r.json(); });
   },
+  hidePost: function(postId) {
+    return apiFetch(API_BASE + '/api/posts/' + postId + '/hide', { method: 'POST' })
+      .then(function(r) { return r.json(); });
+  },
+  unhidePost: function(postId) {
+    return apiFetch(API_BASE + '/api/posts/' + postId + '/unhide', { method: 'POST' })
+      .then(function(r) { return r.json(); });
+  },
+  recalcComments: function(postId) {
+    return apiFetch(API_BASE + '/api/posts/' + postId + '/recalc-comments', { method: 'POST' })
+      .then(function(r) { return r.json(); });
+  },
 
   // ---- 评论 ----
   getComments: function(postId) {

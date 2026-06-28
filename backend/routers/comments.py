@@ -5,8 +5,9 @@ from fastapi import APIRouter, HTTPException, Request
 
 from models import CommentIn, row_to_dict, now_iso
 from database import get_db
-from middleware import get_user_id
+from middleware import get_user_id, _get_client_ip
 from services.events import record_event
+from services.ip_geo import get_ip_province
 
 router = APIRouter(prefix="/api/posts/{post_id}/comments", tags=["comments"])
 
@@ -20,6 +21,9 @@ def _comment_with_author(conn, row):
     ).fetchone()
     if author:
         d["author"] = dict(author)
+    # IP 属地
+    ip = d.get("ip", "")
+    d["ip_province"] = get_ip_province(ip) if ip else ""
     return d
 
 
@@ -41,6 +45,9 @@ def list_comments(post_id: int, request: Request):
                 "id": r["author_id"], "username": r["username"], "name": r["name"],
                 "avatar": r["avatar"], "title": r["title"], "level": r["level"],
             }
+            # IP 属地
+            ip = d.get("ip", "")
+            d["ip_province"] = get_ip_province(ip) if ip else ""
             all_comments.append(d)
 
         # 组装嵌套结构（1 级）
@@ -62,6 +69,7 @@ def list_comments(post_id: int, request: Request):
 @router.post("")
 def create_comment(post_id: int, body: CommentIn, request: Request):
     uid = get_user_id(request)
+    client_ip = _get_client_ip(request)
     with get_db() as conn:
         # 验证帖子存在
         post = conn.execute("SELECT id FROM posts WHERE id=?", (post_id,)).fetchone()
@@ -78,8 +86,8 @@ def create_comment(post_id: int, body: CommentIn, request: Request):
                 raise HTTPException(400, "父评论不存在或不属于此帖子")
 
         cur = conn.execute(
-            "INSERT INTO comments (user_id, post_id, parent_id, content, created_at) VALUES (?, ?, ?, ?, ?)",
-            (uid, post_id, parent_id, body.content, now_iso()),
+            "INSERT INTO comments (user_id, post_id, parent_id, content, ip, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (uid, post_id, parent_id, body.content, client_ip, now_iso()),
         )
         comment_id = cur.lastrowid
 

@@ -199,6 +199,17 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_events(created_at);
         """)
 
+        # v3.5 迁移：帖子表增加 ip、is_hidden；评论表增加 ip
+        for table, col, col_def in [
+            ("posts", "ip", "TEXT DEFAULT ''"),
+            ("posts", "is_hidden", "INTEGER DEFAULT 0"),
+            ("comments", "ip", "TEXT DEFAULT ''"),
+        ]:
+            try:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_def}")
+            except sqlite3.OperationalError:
+                pass
+
         # 给旧 events 表添加 ref 字段
         cols = [row["name"] for row in conn.execute("PRAGMA table_info(events)")]
         if "ref" not in cols:

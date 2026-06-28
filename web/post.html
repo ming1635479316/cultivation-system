@@ -82,12 +82,16 @@ function loadPost() {
     var authorId = p.author ? (p.author.id || p.author.user_id) : p.user_id;
     var html = '<div class="post-detail-header">'
       + renderAuthor(p.author)
-      + '<span class="post-time">' + formatTime(p.created_at) + '</span>'
+      + '<div class="post-card-meta-right">'
       + renderDeleteBtn('post', p.id, authorId)
+      + renderHideBtn(p.id, authorId, p.is_hidden === 1)
+      + '<span class="post-time">' + formatTime(p.created_at, true) + '</span>'
       + '</div>'
-      + '<h2 class="post-detail-title">' + escapeHtml(p.title) + '</h2>'
+      + '</div>'
+      + '<h2 class="post-detail-title">' + escapeHtml(p.title) + (p.is_hidden === 1 ? ' <span class="post-hidden-badge">[已隐藏]</span>' : '') + '</h2>'
       + '<span class="post-type-badge ' + typeCls + '">' + typeLabel + '</span>'
       + renderTags(tags)
+      + renderIpProvince(p.ip_province)
       + '<div class="post-detail-content">' + escapeHtml(p.content).replace(/\n/g, '<br>') + '</div>'
       + '<div class="post-detail-footer">'
       + renderVoteButtons('post', p.id, p.vote_score, p.user_vote || 0)
@@ -98,6 +102,9 @@ function loadPost() {
     bindDeleteEvents(document.getElementById('postDetail'), function() {
       // 帖子被删除后返回社区
       window.location.href = 'community.html';
+    });
+    bindHideEvents(document.getElementById('postDetail'), function() {
+      loadPost();
     });
   }).catch(function() {
     document.getElementById('postDetail').innerHTML = '<p style="color:var(--seal);">加载失败</p>';
@@ -125,6 +132,8 @@ function loadComments() {
     bindVoteEvents(list);
     bindReplyEvents(list);
     bindDeleteEvents(list, function() { loadComments(); });
+    // 自动修正帖子评论数
+    api.recalcComments(postId);
   }).catch(function() {
     document.getElementById('commentList').innerHTML = '<p style="color:var(--seal);">加载评论失败</p>';
   });
@@ -136,8 +145,11 @@ function renderComment(c, isReply) {
   var html = '<div class="comment-item' + indent + '" id="comment-' + c.id + '">'
     + '<div class="comment-header">'
     + renderAuthor(c.author)
-    + '<span class="post-time">' + formatTime(c.created_at) + '</span>'
+    + '<div class="post-card-meta-right">'
     + renderDeleteBtn('comment', c.id, authorId)
+    + '<span class="post-time">' + formatTime(c.created_at, true) + '</span>'
+    + renderIpProvince(c.ip_province)
+    + '</div>'
     + '</div>'
     + '<div class="comment-body">' + escapeHtml(c.content) + '</div>'
     + '<div class="comment-actions">'

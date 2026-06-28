@@ -7,8 +7,9 @@ from fastapi import APIRouter, HTTPException, Request, Query
 
 from models import PostIn, PostUpdateIn, row_to_dict, now_iso, json_dumps, json_loads
 from database import get_db
-from middleware import get_user_id
+from middleware import get_user_id, _get_client_ip
 from services.events import record_event
+from services.ip_geo import get_ip_province
 
 router = APIRouter(prefix="/api/posts", tags=["posts"])
 
@@ -23,6 +24,9 @@ def _post_with_author(conn, row):
     ).fetchone()
     if author:
         d["author"] = dict(author)
+    # IP 属地
+    ip = d.get("ip", "")
+    d["ip_province"] = get_ip_province(ip) if ip else ""
     return d
 
 
@@ -33,8 +37,11 @@ def list_posts(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=50),
 ):
-    get_user_id(request)
+    uid = get_user_id(request)
     offset = (page - 1) * limit
+
+    # 基础过滤：隐藏帖子仅作者本人可见
+    base_where = " AND (p.is_hidden=0 OR p.user_id=?)"
 
     extra_where = ""
     if sort == "hot":
@@ -50,12 +57,13 @@ def list_posts(
 
     sql = (
         "SELECT p.* FROM posts p WHERE 1=1"
-        + extra_where +
-        f" ORDER BY {order} LIMIT ? OFFSET ?"
+        + base_where
+        + extra_where
+        + f" ORDER BY {order} LIMIT ? OFFSET ?"
     )
 
     with get_db() as conn:
-        rows = conn.execute(sql, (limit, offset)).fetchall()
+        rows = conn.execute(sql, (uid, limit, offset)).fetchall()
         posts = [_post_with_author(conn, r) for r in rows]
     return {"posts": posts, "page": page, "sort": sort}
 
@@ -64,12 +72,13 @@ def list_posts(
 def create_post(body: PostIn, request: Request):
     uid = get_user_id(request)
     tags_json = json_dumps(body.tags)
+    client_ip = _get_client_ip(request)
 
     with get_db() as conn:
         cur = conn.execute(
-            """INSERT INTO posts (user_id, title, content, type, tags, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
-            (uid, body.title, body.content, body.type, tags_json, now_iso(), now_iso()),
+            """INSERT INTO posts (user_id, title, content, type, tags, ip, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (uid, body.title, body.content, body.type, tags_json, client_ip, now_iso(), now_iso()),
         )
         post_id = cur.lastrowid
         record_event(conn, uid, "post_create", value={"theory": 2}, ref=f"post_{post_id}")
@@ -141,3 +150,45 @@ def delete_post(post_id: int, request: Request):
         conn.execute("DELETE FROM votes WHERE target_type='post' AND target_id=?", (post_id,))
         conn.execute("DELETE FROM posts WHERE id=?", (post_id,))
     return {"ok": True}
+
+
+@router.post("/{post_id}/hide")
+def hide_post(post_id: int, request: Request):
+    """隐藏帖子（仅作者可操作）。"""
+    uid = get_user_id(request)
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM posts WHERE id=?", (post_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, "帖子不存在")
+        if row["user_id"] != uid:
+            raise HTTPException(403, "只能隐藏自己的帖子")
+        conn.execute("UPDATE posts SET is_hidden=1 WHERE id=?", (post_id,))
+    return {"ok": True, "is_hidden": True}
+
+
+@router.post("/{post_id}/unhide")
+def unhide_post(post_id: int, request: Request):
+    """取消隐藏帖子（仅作者可操作）。"""
+    uid = get_user_id(request)
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM posts WHERE id=?", (post_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, "帖子不存在")
+        if row["user_id"] != uid:
+            raise HTTPException(403, "只能操作自己的帖子")
+        conn.execute("UPDATE posts SET is_hidden=0 WHERE id=?", (post_id,))
+    return {"ok": True, "is_hidden": False}
+
+
+@router.post("/{post_id}/recalc-comments")
+def recalc_comments(post_id: int, request: Request):
+    """重新计算帖子的 comment_count（修复不一致）。"""
+    get_user_id(request)
+    with get_db() as conn:
+        actual = conn.execute(
+            "SELECT COUNT(*) FROM comments WHERE post_id=?", (post_id,)
+        ).fetchone()[0]
+        conn.execute(
+            "UPDATE posts SET comment_count=? WHERE id=?", (actual, post_id)
+        )
+    return {"ok": True, "comment_count": actual}

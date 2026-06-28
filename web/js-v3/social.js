@@ -1,16 +1,24 @@
-/* ===== 计算机修行录 - 社交功能共享工具 v3.1 ===== */
+/* ===== 计算机修行录 - 社交功能共享工具 v3.5 ===== */
 
-// 相对时间格式化
-function formatTime(iso) {
+// 时间格式化
+// showExact: true = 显示精确到分钟的绝对时间
+function formatTime(iso, showExact) {
   if (!iso) return '';
   var now = Date.now();
   var then = new Date(iso + (iso.endsWith('Z') ? '' : 'Z')).getTime();
   var diff = Math.floor((now - then) / 1000);
-  if (diff < 60) return '刚刚';
-  if (diff < 3600) return Math.floor(diff / 60) + '分钟前';
-  if (diff < 86400) return Math.floor(diff / 3600) + '小时前';
-  if (diff < 604800) return Math.floor(diff / 86400) + '天前';
-  return iso.slice(0, 10);
+  var rel;
+  if (diff < 60) rel = '刚刚';
+  else if (diff < 3600) rel = Math.floor(diff / 60) + '分钟前';
+  else if (diff < 86400) rel = Math.floor(diff / 3600) + '小时前';
+  else if (diff < 604800) rel = Math.floor(diff / 86400) + '天前';
+  else rel = iso.slice(0, 10);
+
+  if (showExact) {
+    var exact = iso.slice(0, 16).replace('T', ' '); // "2026-06-28 14:35"
+    return '<span title="' + exact + '">' + rel + ' · ' + exact + '</span>';
+  }
+  return rel;
 }
 
 // HTML 转义（防 XSS）
@@ -117,6 +125,49 @@ function renderDeleteBtn(type, id, authorId) {
     return '<button class="btn-del-mini" data-del-type="' + type + '" data-del-id="' + id + '" title="删除" onclick="event.stopPropagation();">✕</button>';
   }
   return '';
+}
+
+// IP 属地徽章
+function renderIpProvince(province) {
+  if (!province) return '';
+  return '<span class="ip-province">' + escapeHtml(province) + '</span>';
+}
+
+// 隐藏按钮（仅自己的帖子显示）
+function renderHideBtn(postId, authorId, isHidden) {
+  var curId = (AUTH_USER && AUTH_USER.id);
+  if (curId && curId === authorId) {
+    var label = isHidden ? '取消隐藏' : '隐藏';
+    return '<button class="btn-hide-mini" data-hide-id="' + postId + '" data-hidden="' + (isHidden ? '1' : '0') + '" title="' + label + '" onclick="event.stopPropagation();">' + (isHidden ? '👁' : '🙈') + '</button>';
+  }
+  return '';
+}
+
+// 委托隐藏事件
+function bindHideEvents(container, onHidden) {
+  if (!container) return;
+  container.querySelectorAll('.btn-hide-mini').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      e.preventDefault();
+      var postId = parseInt(btn.dataset.hideId);
+      var isHidden = btn.dataset.hidden === '1';
+      if (isHidden) {
+        api.unhidePost(postId).then(function(res) {
+          if (res && res.ok !== false) {
+            if (onHidden) onHidden();
+          }
+        }).catch(function() {});
+      } else {
+        if (!confirm('确定要隐藏这篇帖子吗？隐藏后其他用户将看不到，你可以随时取消隐藏。')) return;
+        api.hidePost(postId).then(function(res) {
+          if (res && res.ok !== false) {
+            if (onHidden) onHidden();
+          }
+        }).catch(function() {});
+      }
+    });
+  });
 }
 
 // 委托删除事件
