@@ -62,6 +62,7 @@
   <script src="js-v3/nav.js"></script>
 <script>
 var postId = parseInt(new URLSearchParams(location.search).get('id'));
+var isEditing = new URLSearchParams(location.search).get('edit') === '1';
 var replyTo = null; // { id, name }
 
 function loadPost() {
@@ -83,30 +84,100 @@ function loadPost() {
     document.title = p.title + ' · 修炼社区';
 
     var authorId = p.author ? (p.author.id || p.author.user_id) : p.user_id;
-    var html = '<div class="post-detail-header">'
-      + renderAuthor(p.author)
-      + '<span class="post-time">' + formatTime(p.created_at, true) + '</span>'
-      + '</div>'
-      + '<h2 class="post-detail-title">' + escapeHtml(p.title) + (p.is_hidden === 1 ? ' <span class="post-hidden-badge">[已隐藏]</span>' : '') + '</h2>'
-      + '<span class="post-type-badge ' + typeCls + '">' + typeLabel + '</span>'
-      + renderTags(tags)
-      + renderIpProvince(p.ip_province)
-      + '<div class="post-detail-content">' + escapeHtml(p.content).replace(/\n/g, '<br>') + '</div>'
-      + '<div class="post-detail-footer">'
-      + renderVoteButtons('post', p.id, p.vote_score, p.user_vote || 0)
-      + '</div>';
 
-    document.getElementById('postDetail').innerHTML = html;
-    bindVoteEvents(document.getElementById('postDetail'));
-    bindDeleteEvents(document.getElementById('postDetail'), function() {
-      // 帖子被删除后返回社区
-      window.location.href = 'community.html';
+    // 顶栏：返回社区 + 三点菜单
+    var barHtml = '<a href="community.html" style="color:var(--text-dim);font-size:13px;text-decoration:none;">← 返回社区</a>';
+    barHtml += '<span>' + renderPostMenu(p.id, authorId, p.is_hidden === 1) + '</span>';
+    document.querySelector('.post-actions-bar').innerHTML = barHtml;
+    bindPostMenuEvents(document.querySelector('.post-actions-bar'), {
+      onEdit: function() { startEdit(p); },
+      onHide: function() { loadPost(); },
+      onDelete: function() { window.location.href = 'community.html'; }
     });
-    // 顶栏文字按钮（删除 / 隐藏）
-    renderPostActionBar(p.id, authorId, p.is_hidden === 1);
 
+    if (isEditing) {
+      renderEditForm(p);
+    } else {
+      var html = '<div class="post-detail-header">'
+        + renderAuthor(p.author)
+        + '<span class="post-time">' + formatTime(p.created_at, true) + '</span>'
+        + '</div>'
+        + '<h2 class="post-detail-title">' + escapeHtml(p.title) + (p.is_hidden === 1 ? ' <span class="post-hidden-badge">[已隐藏]</span>' : '') + '</h2>'
+        + '<span class="post-type-badge ' + typeCls + '">' + typeLabel + '</span>'
+        + renderTags(tags)
+        + renderIpProvince(p.ip_province)
+        + '<div class="post-detail-content">' + escapeHtml(p.content).replace(/\n/g, '<br>') + '</div>'
+        + '<div class="post-detail-footer">'
+        + renderVoteButtons('post', p.id, p.vote_score, p.user_vote || 0)
+        + '</div>';
+      document.getElementById('postDetail').innerHTML = html;
+      bindVoteEvents(document.getElementById('postDetail'));
+    }
   }).catch(function() {
     document.getElementById('postDetail').innerHTML = '<p style="color:var(--seal);">加载失败</p>';
+  });
+}
+
+function startEdit(p) {
+  isEditing = true;
+  renderEditForm(p);
+  // 更新 URL 带上 edit=1
+  if (history.replaceState) {
+    history.replaceState(null, '', 'post.html?id=' + postId + '&edit=1');
+  }
+}
+
+function renderEditForm(p) {
+  var typeLabel = p.type === 'question' ? '问答' : '文章';
+  var typeCls = p.type === 'question' ? 'type-q' : 'type-a';
+  var tags = (typeof p.tags === 'string' ? JSON.parse(p.tags || '[]') : (p.tags || []));
+
+  var html = '<div class="post-detail-header">'
+    + renderAuthor(p.author)
+    + '<span class="post-time">' + formatTime(p.created_at, true) + '</span>'
+    + '</div>'
+    + '<div class="form-row"><label>标题</label>'
+    + '<input type="text" id="editTitle" value="' + escapeHtml(p.title).replace(/"/g, '&quot;') + '" maxlength="200" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;background:var(--bg-card);color:var(--text);">'
+    + '</div>'
+    + '<div class="form-row" style="margin-top:12px;"><label>内容</label>'
+    + '<textarea id="editContent" rows="10" maxlength="10000" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;resize:vertical;background:var(--bg-card);color:var(--text);">' + escapeHtml(p.content) + '</textarea>'
+    + '</div>'
+    + '<div style="margin-top:12px;display:flex;gap:8px;">'
+    + '<button class="btn-save" id="btnSaveEdit">保存</button>'
+    + '<button class="btn-cancel" id="btnCancelEdit">取消</button>'
+    + '<span id="editMsg" style="font-size:13px;align-self:center;"></span>'
+    + '</div>';
+
+  document.getElementById('postDetail').innerHTML = html;
+
+  document.getElementById('btnSaveEdit').addEventListener('click', function() {
+    var title = document.getElementById('editTitle').value.trim();
+    var content = document.getElementById('editContent').value.trim();
+    var msg = document.getElementById('editMsg');
+    if (!title) { msg.textContent = '标题不能为空'; msg.style.color = 'var(--seal)'; return; }
+    if (!content) { msg.textContent = '内容不能为空'; msg.style.color = 'var(--seal)'; return; }
+
+    var btn = document.getElementById('btnSaveEdit');
+    btn.disabled = true; btn.textContent = '保存中...';
+    api.updatePost(postId, { title: title, content: content }).then(function() {
+      isEditing = false;
+      if (history.replaceState) {
+        history.replaceState(null, '', 'post.html?id=' + postId);
+      }
+      loadPost();
+    }).catch(function() {
+      msg.textContent = '保存失败';
+      msg.style.color = 'var(--seal)';
+      btn.disabled = false; btn.textContent = '保存';
+    });
+  });
+
+  document.getElementById('btnCancelEdit').addEventListener('click', function() {
+    isEditing = false;
+    if (history.replaceState) {
+      history.replaceState(null, '', 'post.html?id=' + postId);
+    }
+    loadPost();
   });
 }
 
@@ -130,8 +201,7 @@ function loadComments() {
     document.getElementById('commentCount').textContent = count;
     bindVoteEvents(list);
     bindReplyEvents(list);
-    bindDeleteEvents(list, function() { loadComments(); });
-    // 自动修正帖子评论数
+    bindCommentDeleteEvents(list, function() { loadComments(); });
     api.recalcComments(postId);
   }).catch(function() {
     document.getElementById('commentList').innerHTML = '<p style="color:var(--seal);">加载评论失败</p>';
@@ -145,7 +215,7 @@ function renderComment(c, isReply) {
     + '<div class="comment-header">'
     + renderAuthor(c.author)
     + '<div class="post-card-meta-right">'
-    + renderDeleteBtn('comment', c.id, authorId)
+    + renderCommentDeleteBtn(c.id, authorId)
     + '<span class="post-time">' + formatTime(c.created_at, true) + '</span>'
     + renderIpProvince(c.ip_province)
     + '</div>'
@@ -198,46 +268,12 @@ document.getElementById('btnSubmitComment').addEventListener('click', function()
   });
 });
 
-// 支持回车提交
 document.getElementById('commentInput').addEventListener('keydown', function(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
     document.getElementById('btnSubmitComment').click();
   }
 });
-
-// 顶栏操作按钮（删除、隐藏/取消隐藏）
-function renderPostActionBar(postId, authorId, isHidden) {
-  var curId = (AUTH_USER && AUTH_USER.id);
-  if (!curId || curId !== authorId) return;
-  var html = '<button class="btn-text-action btn-del-action" id="btnDelPost">删除</button>';
-  html += isHidden
-    ? '<button class="btn-text-action btn-hide-action" id="btnHidePost">取消隐藏</button>'
-    : '<button class="btn-text-action btn-hide-action" id="btnHidePost">隐藏</button>';
-  document.getElementById('postActions').innerHTML = html;
-
-  // 删除事件
-  document.getElementById('btnDelPost').addEventListener('click', function() {
-    if (!confirm('确定要删除这篇帖子吗？')) return;
-    api.deletePost(postId).then(function() {
-      window.location.href = 'community.html';
-    }).catch(function() {});
-  });
-
-  // 隐藏/取消隐藏事件
-  document.getElementById('btnHidePost').addEventListener('click', function() {
-    if (isHidden) {
-      api.unhidePost(postId).then(function(res) {
-        if (res && res.ok !== false) loadPost();
-      }).catch(function() {});
-    } else {
-      if (!confirm('确定要隐藏这篇帖子吗？隐藏后其他用户将看不到。')) return;
-      api.hidePost(postId).then(function(res) {
-        if (res && res.ok !== false) loadPost();
-      }).catch(function() {});
-    }
-  });
-}
 
 initStore(function() {
   loadPost();

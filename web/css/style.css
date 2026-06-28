@@ -1140,13 +1140,29 @@ a:hover { opacity: 0.8; }
 /* --- 帖子卡片右侧 meta --- */
 .post-card-meta-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
-/* --- 隐藏按钮 --- */
-.btn-hide-mini {
+/* --- 帖子三点菜单 --- */
+.post-menu { position: relative; display: inline-block; }
+.post-menu-btn {
   background: none; border: none; cursor: pointer;
-  font-size: 13px; padding: 1px 2px; color: var(--text-muted);
-  border-radius: 3px; line-height: 1;
+  font-size: 18px; padding: 0 4px; color: var(--text-muted);
+  line-height: 1; letter-spacing: 1px; font-weight: 700;
 }
-.btn-hide-mini:hover { background: var(--bg-hover); }
+.post-menu-btn:hover { color: var(--text); }
+.post-menu-dropdown {
+  display: none; position: absolute; right: 0; top: 100%;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  z-index: 100; min-width: 100px; padding: 4px 0;
+}
+.post-menu.open .post-menu-dropdown { display: block; }
+.post-menu-dropdown button {
+  display: block; width: 100%; text-align: left;
+  background: none; border: none; padding: 8px 16px;
+  font-size: 13px; color: var(--text); cursor: pointer;
+}
+.post-menu-dropdown button:hover { background: var(--bg-hover); }
+.post-menu-dropdown .menu-item-danger { color: #e00; }
+.post-menu-dropdown .menu-item-danger:hover { background: rgba(224,0,0,0.06); }
 
 /* --- 隐藏状态标记 --- */
 .post-hidden-badge { font-size: 11px; color: var(--seal); font-weight: 400; }

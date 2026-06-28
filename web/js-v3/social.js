@@ -122,11 +122,71 @@ function formatPower(n) {
   return n.toLocaleString();
 }
 
-// 删除按钮（仅自己的帖子/评论显示）
-function renderDeleteBtn(type, id, authorId) {
+// 帖子操作菜单（⋯ 三点菜单：修改/隐藏/删除）
+function renderPostMenu(postId, authorId, isHidden) {
+  var curId = (AUTH_USER && AUTH_USER.id);
+  if (!curId || curId !== authorId) return '';
+  var html = '<div class="post-menu" data-post-id="' + postId + '" data-hidden="' + (isHidden ? '1' : '0') + '">';
+  html += '<button class="post-menu-btn" onclick="event.stopPropagation();event.preventDefault();this.parentElement.classList.toggle(\'open\');" title="更多操作">⋯</button>';
+  html += '<div class="post-menu-dropdown" onclick="event.stopPropagation();">';
+  html += '<button data-action="edit">修改</button>';
+  html += '<button data-action="hide">' + (isHidden ? '取消隐藏' : '隐藏') + '</button>';
+  html += '<button data-action="delete" class="menu-item-danger">删除</button>';
+  html += '</div></div>';
+  return html;
+}
+
+// 关闭所有打开的菜单
+function closeAllMenus() {
+  document.querySelectorAll('.post-menu.open').forEach(function(m) { m.classList.remove('open'); });
+}
+
+// 全局点击关闭菜单
+document.addEventListener('click', closeAllMenus);
+
+// 委托帖子菜单事件（edit/hide/delete）
+// callbacks: { onEdit, onHide, onDelete }  — 返回 false 阻止默认行为
+function bindPostMenuEvents(container, callbacks) {
+  if (!container) return;
+  callbacks = callbacks || {};
+  container.querySelectorAll('.post-menu-dropdown button').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      e.preventDefault();
+      var menu = btn.closest('.post-menu');
+      var postId = parseInt(menu.dataset.postId);
+      var isHidden = menu.dataset.hidden === '1';
+      var action = btn.dataset.action;
+      menu.classList.remove('open');
+
+      if (action === 'edit') {
+        if (callbacks.onEdit) callbacks.onEdit(postId);
+      } else if (action === 'hide') {
+        if (isHidden) {
+          api.unhidePost(postId).then(function(res) {
+            if (res && res.ok !== false && callbacks.onHide) callbacks.onHide();
+          }).catch(function() {});
+        } else {
+          if (!confirm('确定要隐藏这篇帖子吗？隐藏后其他用户将看不到。')) return;
+          api.hidePost(postId).then(function(res) {
+            if (res && res.ok !== false && callbacks.onHide) callbacks.onHide();
+          }).catch(function() {});
+        }
+      } else if (action === 'delete') {
+        if (!confirm('确定要删除吗？此操作不可撤销。')) return;
+        api.deletePost(postId).then(function() {
+          if (callbacks.onDelete) callbacks.onDelete();
+        }).catch(function() {});
+      }
+    });
+  });
+}
+
+// 旧版删除按钮（评论用，保持简洁）
+function renderCommentDeleteBtn(commentId, authorId) {
   var curId = (AUTH_USER && AUTH_USER.id);
   if (curId && curId === authorId) {
-    return '<button class="btn-del-mini" data-del-type="' + type + '" data-del-id="' + id + '" title="删除" onclick="event.stopPropagation();">✕</button>';
+    return '<button class="btn-del-mini" data-del-comment-id="' + commentId + '" title="删除" onclick="event.stopPropagation();">✕</button>';
   }
   return '';
 }
@@ -137,65 +197,19 @@ function renderIpProvince(province) {
   return '<span class="ip-province">' + escapeHtml(province) + '</span>';
 }
 
-// 隐藏按钮（仅自己的帖子显示）
-function renderHideBtn(postId, authorId, isHidden) {
-  var curId = (AUTH_USER && AUTH_USER.id);
-  if (curId && curId === authorId) {
-    var label = isHidden ? '取消隐藏' : '隐藏';
-    return '<button class="btn-hide-mini" data-hide-id="' + postId + '" data-hidden="' + (isHidden ? '1' : '0') + '" title="' + label + '" onclick="event.stopPropagation();">' + (isHidden ? '👁' : '🙈') + '</button>';
-  }
-  return '';
-}
-
-// 委托隐藏事件
-function bindHideEvents(container, onHidden) {
-  if (!container) return;
-  container.querySelectorAll('.btn-hide-mini').forEach(function(btn) {
-    btn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      e.preventDefault();
-      var postId = parseInt(btn.dataset.hideId);
-      var isHidden = btn.dataset.hidden === '1';
-      if (isHidden) {
-        api.unhidePost(postId).then(function(res) {
-          if (res && res.ok !== false) {
-            if (onHidden) onHidden();
-          }
-        }).catch(function() {});
-      } else {
-        if (!confirm('确定要隐藏这篇帖子吗？隐藏后其他用户将看不到，你可以随时取消隐藏。')) return;
-        api.hidePost(postId).then(function(res) {
-          if (res && res.ok !== false) {
-            if (onHidden) onHidden();
-          }
-        }).catch(function() {});
-      }
-    });
-  });
-}
-
-// 委托删除事件
-function bindDeleteEvents(container, onDeleted) {
+// 委托评论删除事件
+function bindCommentDeleteEvents(container, onDeleted) {
   if (!container) return;
   container.querySelectorAll('.btn-del-mini').forEach(function(btn) {
     btn.addEventListener('click', function(e) {
       e.stopPropagation();
       e.preventDefault();
-      var type = btn.dataset.delType;
-      var id = parseInt(btn.dataset.delId);
-      if (!confirm('确定要删除吗？')) return;
-      if (type === 'post') {
-        api.deletePost(id).then(function() {
-          if (onDeleted) onDeleted();
-        }).catch(function() {});
-      } else if (type === 'comment') {
-        // 需要从父级找到 postId
-        var postIdEl = document.getElementById('postId');
-        var postId = postIdEl ? parseInt(postIdEl.value) : (window.postId || 0);
-        api.deleteComment(postId, id).then(function() {
-          if (onDeleted) onDeleted();
-        }).catch(function() {});
-      }
+      var commentId = parseInt(btn.dataset.delCommentId);
+      if (!confirm('确定要删除这条评论吗？')) return;
+      var postId = window.postId || 0;
+      api.deleteComment(postId, commentId).then(function() {
+        if (onDeleted) onDeleted();
+      }).catch(function() {});
     });
   });
 }

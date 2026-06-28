@@ -109,11 +109,10 @@ function loadPosts(sort, page, append) {
 
     document.getElementById('btnLoadMore').style.display = data.posts.length >= 20 ? '' : 'none';
     bindVoteEvents(document.getElementById('postList'));
-    bindDeleteEvents(document.getElementById('postList'), function() {
-      loadPosts(currentSort, 1);
-    });
-    bindHideEvents(document.getElementById('postList'), function() {
-      loadPosts(currentSort, 1);
+    bindPostMenuEvents(document.getElementById('postList'), {
+      onEdit: function(postId) { location.href = 'post.html?id=' + postId + '&edit=1'; },
+      onHide: function() { loadPosts(currentSort, 1); },
+      onDelete: function() { loadPosts(currentSort, 1); }
     });
   }).catch(function() {
     document.getElementById('postList').innerHTML = '<p style="color:var(--seal);text-align:center;padding:40px;">加载失败，请检查网络后刷新</p>';
@@ -125,18 +124,17 @@ function renderPostCard(p) {
   var typeCls = p.type === 'question' ? 'type-q' : 'type-a';
   var tags = (typeof p.tags === 'string' ? JSON.parse(p.tags || '[]') : (p.tags || []));
   var authorId = p.author ? (p.author.id || p.author.user_id) : p.user_id;
-  return '<div class="post-card" onclick="location.href=\'post.html?id=' + p.id + '\'">'
+  return '<div class="post-card">'
     + '<div class="post-card-header">'
     + renderAuthor(p.author)
     + '<div class="post-card-meta-right">'
-    + renderDeleteBtn('post', p.id, authorId)
-    + renderHideBtn(p.id, authorId, p.is_hidden === 1)
+    + renderPostMenu(p.id, authorId, p.is_hidden === 1)
     + '<span class="post-time">' + formatTime(p.created_at, true) + '</span>'
     + '</div>'
     + '</div>'
-    + '<h3 class="post-card-title">' + escapeHtml(p.title) + (p.is_hidden === 1 ? ' <span class="post-hidden-badge">[已隐藏]</span>' : '') + '</h3>'
-    + '<p class="post-card-preview">' + escapeHtml((p.content || '').substring(0, 200)) + '</p>'
-    + '<div class="post-card-footer">'
+    + '<h3 class="post-card-title" onclick="location.href=\'post.html?id=' + p.id + '\'" style="cursor:pointer;">' + escapeHtml(p.title) + (p.is_hidden === 1 ? ' <span class="post-hidden-badge">[已隐藏]</span>' : '') + '</h3>'
+    + '<p class="post-card-preview" onclick="location.href=\'post.html?id=' + p.id + '\'" style="cursor:pointer;">' + escapeHtml((p.content || '').substring(0, 200)) + '</p>'
+    + '<div class="post-card-footer" onclick="location.href=\'post.html?id=' + p.id + '\'" style="cursor:pointer;">'
     + '<span class="post-type-badge ' + typeCls + '">' + typeLabel + '</span>'
     + renderTags(tags)
     + renderVoteButtons('post', p.id, p.vote_score, p.user_vote || 0)
