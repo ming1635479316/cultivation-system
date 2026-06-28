@@ -105,10 +105,10 @@ function loadPost() {
         + '<h2 class="post-detail-title">' + escapeHtml(p.title) + (p.is_hidden === 1 ? ' <span class="post-hidden-badge">[已隐藏]</span>' : '') + '</h2>'
         + '<span class="post-type-badge ' + typeCls + '">' + typeLabel + '</span>'
         + renderTags(tags)
-        + renderIpProvince(p.ip_province)
         + '<div class="post-detail-content">' + escapeHtml(p.content).replace(/\n/g, '<br>') + '</div>'
         + '<div class="post-detail-footer">'
         + renderVoteButtons('post', p.id, p.vote_score, p.user_vote || 0)
+        + renderIpProvince(p.ip_province)
         + '</div>';
       document.getElementById('postDetail').innerHTML = html;
       bindVoteEvents(document.getElementById('postDetail'));

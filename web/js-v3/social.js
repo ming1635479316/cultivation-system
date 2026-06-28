@@ -194,7 +194,7 @@ function renderCommentDeleteBtn(commentId, authorId) {
 // IP 属地徽章
 function renderIpProvince(province) {
   if (!province) return '';
-  return '<span class="ip-province">' + escapeHtml(province) + '</span>';
+  return '<span class="ip-province">IP属地：' + escapeHtml(province) + '</span>';
 }
 
 // 委托评论删除事件
