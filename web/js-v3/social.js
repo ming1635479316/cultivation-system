@@ -15,7 +15,10 @@ function formatTime(iso, showExact) {
   else rel = iso.slice(0, 10);
 
   if (showExact) {
-    var exact = iso.slice(0, 16).replace('T', ' '); // "2026-06-28 14:35"
+    // 转换为本地时间显示
+    var d = new Date(iso + (iso.endsWith('Z') ? '' : 'Z'));
+    var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
+    var exact = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
     return '<span title="' + exact + '">' + rel + ' · ' + exact + '</span>';
   }
   return rel;
