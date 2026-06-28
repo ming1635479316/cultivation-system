@@ -29,11 +29,10 @@ def get_ip_province(ip: str) -> str:
         _cache[ip] = "本地"
         return "本地"
 
-    # 先试 ip-api.com（服务器实测可用）
-    result = _try_ipapi(ip)
+    # 优先用太平洋IP（返回中文省份），备用 ip-api.com
+    result = _try_pconline(ip)
     if not result:
-        # 备用：太平洋IP（国内服务）
-        result = _try_pconline(ip)
+        result = _try_ipapi(ip)
 
     _cache[ip] = result
     return result

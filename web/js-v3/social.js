@@ -5,7 +5,7 @@
 function formatTime(iso, showExact) {
   if (!iso) return '';
   var now = Date.now();
-  var then = new Date(iso + (iso.endsWith('Z') ? '' : 'Z')).getTime();
+  var then = new Date(iso).getTime();
   var diff = Math.floor((now - then) / 1000);
   var rel;
   if (diff < 60) rel = '刚刚';
@@ -15,8 +15,9 @@ function formatTime(iso, showExact) {
   else rel = iso.slice(0, 10);
 
   if (showExact) {
-    // 转换为本地时间显示
-    var d = new Date(iso + (iso.endsWith('Z') ? '' : 'Z'));
+    // 转换为本地时间显示（new Date 可直接解析 ISO 格式）
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return rel;
     var pad = function(n) { return n < 10 ? '0' + n : '' + n; };
     var exact = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
     return '<span title="' + exact + '">' + rel + ' · ' + exact + '</span>';

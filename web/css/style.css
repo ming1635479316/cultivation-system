@@ -1136,7 +1136,6 @@ a:hover { opacity: 0.8; }
 
 /* --- IP属地 --- */
 .ip-province { font-size: 11px; color: var(--text-muted); margin-left: 4px; }
-.ip-province::before { content: '📍'; margin-right: 1px; }
 
 /* --- 帖子卡片右侧 meta --- */
 .post-card-meta-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
