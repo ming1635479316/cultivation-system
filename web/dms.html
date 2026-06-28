@@ -55,6 +55,17 @@ var currentChatUser = null;
 var chatPollTimer = null;
 var lastMessageTime = '';
 
+// 对话列表头像 HTML：支持 base64 图片与文字首字两种模式
+function convAvatarHtml(u) {
+  var av = (u.avatar || '');
+  if (av && av.startsWith('data:image/')) {
+    return '<span class="conv-avatar avatar-has-img" style="background:transparent;">'
+      + '<img src="' + av + '" alt="" class="avatar-img">'
+      + '</span>';
+  }
+  return '<span class="conv-avatar">' + escapeHtml((u.avatar || u.name || '?')[0]) + '</span>';
+}
+
 // 对话列表
 function loadConversations() {
   api.getConversations().then(function(data) {
@@ -68,7 +79,7 @@ function loadConversations() {
       var u = c.otherUser;
       var unreadBadge = c.unreadCount > 0 ? '<span class="unread-badge">' + c.unreadCount + '</span>' : '';
       return '<div class="conv-item" onclick="openChat(' + u.id + ',\'' + escapeHtml(u.name || u.username) + '\')">'
-        + '<span class="conv-avatar">' + escapeHtml((u.avatar || u.name || '?')[0]) + '</span>'
+        + convAvatarHtml(u)
         + '<div class="conv-info">'
         + '<span class="conv-name">' + escapeHtml(u.name || u.username) + unreadBadge + '</span>'
         + '<span class="conv-preview">' + escapeHtml(c.lastMessage || '') + '</span>'

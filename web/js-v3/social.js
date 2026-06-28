@@ -24,8 +24,18 @@ function escapeHtml(str) {
 function renderAuthor(user, showLevel) {
   if (!user) return '';
   var av = user.avatar || '';
-  if (av.length > 10 || av.startsWith('data:')) av = '';
-  var avatar = (av || user.name || '?')[0];
+
+  // 头像 HTML：支持图片和文字两种模式
+  var avatarHtml;
+  if (av && av.startsWith('data:image/')) {
+    avatarHtml = '<span class="author-avatar avatar-has-img" style="background:transparent;">'
+      + '<img src="' + av + '" alt="" class="avatar-img">'
+      + '</span>';
+  } else {
+    var ch = (av || user.name || '?')[0];
+    avatarHtml = '<span class="author-avatar">' + escapeHtml(ch) + '</span>';
+  }
+
   var name = escapeHtml(user.name || user.username || '?');
   var levelBadge = '';
   if (showLevel !== false) {
@@ -34,7 +44,7 @@ function renderAuthor(user, showLevel) {
     levelBadge = '<span class="author-level">' + title + ' · ' + levelName(level) + '</span>';
   }
   return '<span class="author-chip" onclick="event.stopPropagation();location.href=\'user.html?id=' + (user.id || user.user_id) + '\'">'
-    + '<span class="author-avatar">' + escapeHtml(avatar) + '</span>'
+    + avatarHtml
     + '<span class="author-name">' + name + '</span>'
     + levelBadge + '</span>';
 }
