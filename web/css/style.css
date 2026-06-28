@@ -1152,6 +1152,19 @@ a:hover { opacity: 0.8; }
 /* --- 隐藏状态标记 --- */
 .post-hidden-badge { font-size: 11px; color: var(--seal); font-weight: 400; }
 
+/* --- 帖子顶栏操作按钮 --- */
+.post-actions-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.btn-text-action {
+  background: none; border: 1px solid var(--border); border-radius: 4px;
+  padding: 2px 10px; font-size: 12px; cursor: pointer; margin-left: 6px;
+  color: var(--text-dim);
+}
+.btn-text-action:hover { opacity: 0.8; }
+.btn-del-action { color: #e00; border-color: rgba(224,0,0,0.3); }
+.btn-del-action:hover { background: rgba(224,0,0,0.06); }
+.btn-hide-action { color: var(--text-dim); }
+.btn-hide-action:hover { background: var(--bg-hover); }
+
 /* --- 投票按钮 --- */
 .vote-group { display: inline-flex; align-items: center; gap: 2px; }
 .vote-btn {

@@ -26,7 +26,10 @@
 </nav>
 
 <div class="container">
-  <a href="community.html" style="color:var(--text-dim);font-size:13px;text-decoration:none;">← 返回社区</a>
+  <div class="post-actions-bar">
+    <a href="community.html" style="color:var(--text-dim);font-size:13px;text-decoration:none;">← 返回社区</a>
+    <span id="postActions"></span>
+  </div>
 
   <!-- 帖子主体 -->
   <div id="postDetail" class="card" style="margin-top:12px;"></div>
@@ -82,11 +85,7 @@ function loadPost() {
     var authorId = p.author ? (p.author.id || p.author.user_id) : p.user_id;
     var html = '<div class="post-detail-header">'
       + renderAuthor(p.author)
-      + '<div class="post-card-meta-right">'
-      + renderDeleteBtn('post', p.id, authorId)
-      + renderHideBtn(p.id, authorId, p.is_hidden === 1)
       + '<span class="post-time">' + formatTime(p.created_at, true) + '</span>'
-      + '</div>'
       + '</div>'
       + '<h2 class="post-detail-title">' + escapeHtml(p.title) + (p.is_hidden === 1 ? ' <span class="post-hidden-badge">[已隐藏]</span>' : '') + '</h2>'
       + '<span class="post-type-badge ' + typeCls + '">' + typeLabel + '</span>'
@@ -103,9 +102,9 @@ function loadPost() {
       // 帖子被删除后返回社区
       window.location.href = 'community.html';
     });
-    bindHideEvents(document.getElementById('postDetail'), function() {
-      loadPost();
-    });
+    // 顶栏文字按钮（删除 / 隐藏）
+    renderPostActionBar(p.id, authorId, p.is_hidden === 1);
+
   }).catch(function() {
     document.getElementById('postDetail').innerHTML = '<p style="color:var(--seal);">加载失败</p>';
   });
@@ -206,6 +205,39 @@ document.getElementById('commentInput').addEventListener('keydown', function(e) 
     document.getElementById('btnSubmitComment').click();
   }
 });
+
+// 顶栏操作按钮（删除、隐藏/取消隐藏）
+function renderPostActionBar(postId, authorId, isHidden) {
+  var curId = (AUTH_USER && AUTH_USER.id);
+  if (!curId || curId !== authorId) return;
+  var html = '<button class="btn-text-action btn-del-action" id="btnDelPost">删除</button>';
+  html += isHidden
+    ? '<button class="btn-text-action btn-hide-action" id="btnHidePost">取消隐藏</button>'
+    : '<button class="btn-text-action btn-hide-action" id="btnHidePost">隐藏</button>';
+  document.getElementById('postActions').innerHTML = html;
+
+  // 删除事件
+  document.getElementById('btnDelPost').addEventListener('click', function() {
+    if (!confirm('确定要删除这篇帖子吗？')) return;
+    api.deletePost(postId).then(function() {
+      window.location.href = 'community.html';
+    }).catch(function() {});
+  });
+
+  // 隐藏/取消隐藏事件
+  document.getElementById('btnHidePost').addEventListener('click', function() {
+    if (isHidden) {
+      api.unhidePost(postId).then(function(res) {
+        if (res && res.ok !== false) loadPost();
+      }).catch(function() {});
+    } else {
+      if (!confirm('确定要隐藏这篇帖子吗？隐藏后其他用户将看不到。')) return;
+      api.hidePost(postId).then(function(res) {
+        if (res && res.ok !== false) loadPost();
+      }).catch(function() {});
+    }
+  });
+}
 
 initStore(function() {
   loadPost();
