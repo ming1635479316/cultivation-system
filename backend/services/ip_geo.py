@@ -73,8 +73,15 @@ def _try_pconline(ip: str) -> str:
             timeout=5,
         )
         if resp.status_code == 200:
-            resp.encoding = "utf-8"
-            data = resp.json()
+            # PConline 返回 GBK 编码，先按 GBK 解码
+            resp.encoding = "gbk"
+            text = resp.text
+            # 如果 GBK 解码后还有乱码，试试 GB2312
+            if "�" in text or "\\x" in text:
+                resp.encoding = "gb2312"
+                text = resp.text
+            import json
+            data = json.loads(text)
             pro = data.get("pro", "")
             city = data.get("city", "")
             if pro:
