@@ -69,7 +69,7 @@ def list_comments(post_id: int, request: Request):
 @router.post("")
 def create_comment(post_id: int, body: CommentIn, request: Request):
     uid = get_user_id(request)
-    client_ip = _get_client_ip(request)
+    client_ip = _get_client_ip(request) or "unknown"
     with get_db() as conn:
         # 验证帖子存在
         post = conn.execute("SELECT id FROM posts WHERE id=?", (post_id,)).fetchone()

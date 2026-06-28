@@ -72,7 +72,7 @@ def list_posts(
 def create_post(body: PostIn, request: Request):
     uid = get_user_id(request)
     tags_json = json_dumps(body.tags)
-    client_ip = _get_client_ip(request)
+    client_ip = _get_client_ip(request) or "unknown"
 
     with get_db() as conn:
         cur = conn.execute(
