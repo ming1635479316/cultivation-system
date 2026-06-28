@@ -84,8 +84,11 @@ def _try_pconline(ip: str) -> str:
             data = json.loads(text)
             pro = data.get("pro", "")
             city = data.get("city", "")
-            if pro:
-                return pro + (" " + city if city and city != pro else "")
+            # 优先城市名（去掉"市"），直轄市 pro==city 时只保留一个
+            loc = (city or pro or "").rstrip("市")
+            if not loc:
+                loc = pro.rstrip("省")
+            return loc
     except Exception:
         pass
     return ""
